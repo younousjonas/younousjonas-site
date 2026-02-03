@@ -1,0 +1,60 @@
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Merci</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo" aria-label="Logo Younous Jonas">
+          <img src="/images/logo.png" alt="">
+        </div>
+        <div class="brand-title">
+          <strong>Younous Jonas</strong>
+          <span>Conditions · Île V1 · Île V2 · SUBRUN</span>
+        </div>
+      </div>
+
+      <nav aria-label="Navigation principale">
+        <a href="/#ilev2">l’Île V2</a>
+        <a href="/#diagnostic">Diagnostic</a>
+        <a href="/subrun/index.html">SUBRUN</a>
+        <a href="/#livres">Livres</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </div>
+</header>
+<section>
+  <div class="container">
+    <h1 class="section-title">Merci</h1>
+    <p class="lead">
+      Ton diagnostic a été enregistré.
+      Tu peux revenir à l’accueil, ou continuer avec les mini-diagnostics SUBRUN.
+    </p>
+
+    <div class="form-actions">
+      <a class="btn btn-primary" href="/">Retour à l’accueil</a>
+      <a class="btn btn-ghost" href="/subrun/index.html">Explorer SUBRUN</a>
+    </div>
+  </div>
+</section>
+<footer>
+  <div class="container">
+    <p>
+      © <span id="year"></span> Younous Jonas · La Réunion
+      <br>
+      <span class="small">Ce site n’est pas un outil médical. Les diagnostics sont des miroirs : ils servent à reconnaître une condition (état d’opération).</span>
+    </p>
+  </div>
+</footer>
+<script src="/js/main.js"></script>
+<script>document.getElementById("year").textContent = String(new Date().getFullYear());</script></body>
+</html>

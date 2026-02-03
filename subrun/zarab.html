@@ -1,0 +1,182 @@
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vous sentez-vous toujours &#x27;à part&#x27; ? · SUBRUN</title>
+  <meta name="description" content="Mini-diagnostic SUBRUN — Zarab : reconnaître le nœud, qualifier la condition, et choisir l’Île V2.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo" aria-label="Logo Younous Jonas">
+          <img src="/images/logo.png" alt="">
+        </div>
+        <div class="brand-title">
+          <strong>Younous Jonas</strong>
+          <span>Conditions · Île V1 · Île V2 · SUBRUN</span>
+        </div>
+      </div>
+
+      <nav aria-label="Navigation principale">
+        <a href="/#ilev2">l’Île V2</a>
+        <a href="/#diagnostic">Diagnostic</a>
+        <a href="/subrun/index.html">SUBRUN</a>
+        <a href="/#livres">Livres</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <h1 class="section-title">Vous sentez-vous toujours &#x27;à part&#x27; ?</h1>
+    <p class="lead">
+      <strong>Zarab</strong> — Le nœud de l&#x27;étranger perpétuel.
+      Dix questions notées de 0 à 10. Calcule ton score, lis la condition, puis regarde la direction l’Île V2.
+    </p>
+
+    <div class="card">
+      <form class="form" name="diagnostic-subrun" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/merci.html" data-kind="subrun">
+        <input type="hidden" name="form-name" value="diagnostic-subrun">
+        <input type="hidden" name="noeud" value="ZARAB">
+        <p hidden><label>Ne pas remplir : <input name="bot-field"></label></p>
+
+
+        <div class="q">
+          <label>1) Malgré votre présence ancienne ou votre contribution, avez-vous le sentiment de rester un &quot;outsider&quot; ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q1">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>2) Votre communauté ou votre famille privilégie-t-elle les relations internes plutôt que l&#x27;ouverture vers l&#x27;extérieur ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q2">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>3) Ressentez-vous une méfiance (la vôtre ou celle des autres) qui persiste malgré le temps ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q3">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>4) Avez-vous le sentiment que votre identité religieuse ou culturelle vous &quot;sépare&quot; des autres ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q4">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>5) Préférez-vous la discrétion à la visibilité, même quand la visibilité vous serait bénéfique ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q5">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>6) Avez-vous développé une prospérité économique tout en restant en retrait de la vie sociale ou politique ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q6">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>7) Portez-vous la mémoire d&#x27;ancêtres qui ont dû se protéger pour survivre ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q7">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>8) Avez-vous le sentiment que les autres ne comprennent pas vraiment qui vous êtes ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q8">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>9) Votre groupe maintient-il des frontières (mariage, pratiques, langue) qui limitent les échanges ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q9">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>10) Oscillez-vous entre le désir d&#x27;être pleinement réunionnais et la peur de perdre votre identité d&#x27;origine ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q10">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+<div class="form-actions">
+          <button class="btn btn-ghost js-calc" type="button">Calculer mon score</button>
+          <button class="btn btn-primary" type="submit">Envoyer à Younous</button>
+        </div>
+
+        <div class="small">
+          L’envoi est optionnel. Si tu envoies, tes réponses arrivent à Younous (via Netlify Forms).
+        </div>
+
+        <div class="result js-result" style="display:none"></div>
+
+        <div class="result js-note" style="display:none">
+          <strong>Note</strong>
+          <p>
+            Ce diagnostic n’est pas un jugement. C’est un miroir.
+            Reconnaître un nœud est le premier pas pour le dénouer.
+          </p>
+        </div>
+
+        <hr class="sep">
+
+        <label class="small" for="email">Si tu veux être recontacté :</label>
+        <input id="email" type="email" name="email" placeholder="Ton email (optionnel)">
+      </form>
+    </div>
+
+    <div style="margin-top:18px" class="callout">
+      <strong>Direction l’Île V2</strong><br>
+      Quand ce nœud se transforme, l’Île V2 ressemble à une appartenance assumée : participer sans se dissoudre, être visible sans perdre sa culture, et choisir l’ouverture comme stratégie de puissance plutôt que subir le repli.
+    </div>
+
+
+    <div style="margin-top:18px" class="form-actions">
+      <a class="btn btn-ghost" href="/subrun/index.html">Voir les 9 diagnostics</a>
+      <a class="btn btn-primary" href="https://www.amazon.fr/dp/B0F5J21HPP" target="_blank" rel="noopener noreferrer">Lire le tome</a>
+      <a class="btn btn-ghost" href="/#diagnostic">Faire le diagnostic de condition</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>
+      © <span id="year"></span> Younous Jonas · La Réunion
+      <br>
+      <span class="small">Ce site n’est pas un outil médical. Les diagnostics sont des miroirs : ils servent à reconnaître une condition (état d’opération).</span>
+    </p>
+  </div>
+</footer>
+<script src="/js/main.js"></script>
+<script>document.getElementById("year").textContent = String(new Date().getFullYear());</script>
+</body>
+</html>

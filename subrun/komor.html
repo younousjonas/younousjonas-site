@@ -1,0 +1,182 @@
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Luttez-vous pour exister ? · SUBRUN</title>
+  <meta name="description" content="Mini-diagnostic SUBRUN — Komor : reconnaître le nœud, qualifier la condition, et choisir l’Île V2.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo" aria-label="Logo Younous Jonas">
+          <img src="/images/logo.png" alt="">
+        </div>
+        <div class="brand-title">
+          <strong>Younous Jonas</strong>
+          <span>Conditions · Île V1 · Île V2 · SUBRUN</span>
+        </div>
+      </div>
+
+      <nav aria-label="Navigation principale">
+        <a href="/#ilev2">l’Île V2</a>
+        <a href="/#diagnostic">Diagnostic</a>
+        <a href="/subrun/index.html">SUBRUN</a>
+        <a href="/#livres">Livres</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <h1 class="section-title">Luttez-vous pour exister ?</h1>
+    <p class="lead">
+      <strong>Komor</strong> — Le nœud du combat permanent.
+      Dix questions notées de 0 à 10. Calcule ton score, lis la condition, puis regarde la direction l’Île V2.
+    </p>
+
+    <div class="card">
+      <form class="form" name="diagnostic-subrun" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/merci.html" data-kind="subrun">
+        <input type="hidden" name="form-name" value="diagnostic-subrun">
+        <input type="hidden" name="noeud" value="KOMOR">
+        <p hidden><label>Ne pas remplir : <input name="bot-field"></label></p>
+
+
+        <div class="q">
+          <label>1) Portez-vous la conviction profonde que vous devez vous battre plus que les autres pour obtenir ce qui leur est donné ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q1">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>2) Ressentez-vous une hostilité spécifique, différente de ce que vivent les autres, dirigée contre vous ou votre groupe ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q2">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>3) Vivez-vous avec la formule intérieure &quot;je n&#x27;ai pas encore, mais j&#x27;aurai&quot; — un mélange de manque présent et d&#x27;espoir tenace ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q3">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>4) Portez-vous la mémoire d&#x27;un voyage dangereux — le vôtre ou celui de vos proches — qui a marqué votre arrivée ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q4">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>5) Avez-vous le sentiment que votre légitimité à être là est constamment remise en question ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q5">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>6) Ressentez-vous que les accusations portées contre votre groupe (profiter du système, refuser l&#x27;intégration) parlent plus des peurs des autres que de votre réalité ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q6">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>7) Oscillez-vous entre combativité (prouver que vous méritez votre place) et découragement (à quoi bon si rien ne change) ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q7">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>8) Avez-vous développé une solidarité intense avec votre communauté face à l&#x27;adversité extérieure ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q8">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>9) Portez-vous des deuils non reconnus — des proches disparus dans des circonstances que la société préfère ignorer ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q9">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>10) Ressentez-vous que votre réussite éventuelle ne suffira jamais à vous faire accepter pleinement ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q10">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+<div class="form-actions">
+          <button class="btn btn-ghost js-calc" type="button">Calculer mon score</button>
+          <button class="btn btn-primary" type="submit">Envoyer à Younous</button>
+        </div>
+
+        <div class="small">
+          L’envoi est optionnel. Si tu envoies, tes réponses arrivent à Younous (via Netlify Forms).
+        </div>
+
+        <div class="result js-result" style="display:none"></div>
+
+        <div class="result js-note" style="display:none">
+          <strong>Note</strong>
+          <p>
+            Ce diagnostic n’est pas un jugement. C’est un miroir.
+            Reconnaître un nœud est le premier pas pour le dénouer.
+          </p>
+        </div>
+
+        <hr class="sep">
+
+        <label class="small" for="email">Si tu veux être recontacté :</label>
+        <input id="email" type="email" name="email" placeholder="Ton email (optionnel)">
+      </form>
+    </div>
+
+    <div style="margin-top:18px" class="callout">
+      <strong>Direction l’Île V2</strong><br>
+      Quand ce nœud se transforme, l’Île V2 ressemble à une légitimité intrinsèque : tu n’attends plus l’autorisation. Le combat se convertit en création. La solidarité reste, mais elle n’est plus une posture de survie.
+    </div>
+
+
+    <div style="margin-top:18px" class="form-actions">
+      <a class="btn btn-ghost" href="/subrun/index.html">Voir les 9 diagnostics</a>
+      <a class="btn btn-primary" href="https://www.amazon.fr/dp/B0F5HYJSXX" target="_blank" rel="noopener noreferrer">Lire le tome</a>
+      <a class="btn btn-ghost" href="/#diagnostic">Faire le diagnostic de condition</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>
+      © <span id="year"></span> Younous Jonas · La Réunion
+      <br>
+      <span class="small">Ce site n’est pas un outil médical. Les diagnostics sont des miroirs : ils servent à reconnaître une condition (état d’opération).</span>
+    </p>
+  </div>
+</footer>
+<script src="/js/main.js"></script>
+<script>document.getElementById("year").textContent = String(new Date().getFullYear());</script>
+</body>
+</html>

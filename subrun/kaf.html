@@ -1,0 +1,182 @@
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portez-vous le poids de l&#x27;invisible ? · SUBRUN</title>
+  <meta name="description" content="Mini-diagnostic SUBRUN — Kaf : reconnaître le nœud, qualifier la condition, et choisir l’Île V2.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo" aria-label="Logo Younous Jonas">
+          <img src="/images/logo.png" alt="">
+        </div>
+        <div class="brand-title">
+          <strong>Younous Jonas</strong>
+          <span>Conditions · Île V1 · Île V2 · SUBRUN</span>
+        </div>
+      </div>
+
+      <nav aria-label="Navigation principale">
+        <a href="/#ilev2">l’Île V2</a>
+        <a href="/#diagnostic">Diagnostic</a>
+        <a href="/subrun/index.html">SUBRUN</a>
+        <a href="/#livres">Livres</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <h1 class="section-title">Portez-vous le poids de l&#x27;invisible ?</h1>
+    <p class="lead">
+      <strong>Kaf</strong> — Le nœud de l&#x27;arrachement.
+      Dix questions notées de 0 à 10. Calcule ton score, lis la condition, puis regarde la direction l’Île V2.
+    </p>
+
+    <div class="card">
+      <form class="form" name="diagnostic-subrun" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/merci.html" data-kind="subrun">
+        <input type="hidden" name="form-name" value="diagnostic-subrun">
+        <input type="hidden" name="noeud" value="KAF">
+        <p hidden><label>Ne pas remplir : <input name="bot-field"></label></p>
+
+
+        <div class="q">
+          <label>1) Avez-vous parfois l&#x27;impression que votre corps porte une mémoire qui n&#x27;est pas seulement la vôtre ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q1">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>2) Ressentez-vous une difficulté à vous projeter dans l&#x27;avenir, comme si quelque chose vous retenait dans le passé ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q2">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>3) Face à une décision importante, avez-vous tendance à rester bloqué(e) entre deux options sans pouvoir trancher ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q3">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>4) Avez-vous le sentiment de devoir prouver votre valeur plus que les autres pour être reconnu(e) ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q4">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>5) Ressentez-vous parfois une colère sourde dont vous ne connaissez pas vraiment l&#x27;origine ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q5">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>6) Avez-vous l&#x27;impression que vos réussites ne vous appartiennent pas vraiment, ou qu&#x27;elles pourraient vous être retirées ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q6">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>7) Vous sentez-vous parfois invisible, même quand vous êtes présent(e) et actif(ve) ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q7">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>8) Avez-vous du mal à recevoir sans donner en retour immédiatement ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q8">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>9) Portez-vous des non-dits familiaux que personne n&#x27;a jamais nommés ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q9">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>10) Avez-vous le sentiment que quelque chose en vous attend d&#x27;être libéré, mais vous ne savez pas quoi ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q10">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+<div class="form-actions">
+          <button class="btn btn-ghost js-calc" type="button">Calculer mon score</button>
+          <button class="btn btn-primary" type="submit">Envoyer à Younous</button>
+        </div>
+
+        <div class="small">
+          L’envoi est optionnel. Si tu envoies, tes réponses arrivent à Younous (via Netlify Forms).
+        </div>
+
+        <div class="result js-result" style="display:none"></div>
+
+        <div class="result js-note" style="display:none">
+          <strong>Note</strong>
+          <p>
+            Ce diagnostic n’est pas un jugement. C’est un miroir.
+            Reconnaître un nœud est le premier pas pour le dénouer.
+          </p>
+        </div>
+
+        <hr class="sep">
+
+        <label class="small" for="email">Si tu veux être recontacté :</label>
+        <input id="email" type="email" name="email" placeholder="Ton email (optionnel)">
+      </form>
+    </div>
+
+    <div style="margin-top:18px" class="callout">
+      <strong>Direction l’Île V2</strong><br>
+      Quand ce nœud se transforme, l’Île V2 ressemble à une visibilité tranquille : le corps redevient un point d’appui, l’avenir redevient pensable, et la décision redevient possible. La capacité à recevoir s’ouvre, sans dette immédiate.
+    </div>
+
+
+    <div style="margin-top:18px" class="form-actions">
+      <a class="btn btn-ghost" href="/subrun/index.html">Voir les 9 diagnostics</a>
+      <a class="btn btn-primary" href="https://www.amazon.fr/dp/B0F5MC3BMF" target="_blank" rel="noopener noreferrer">Lire le tome</a>
+      <a class="btn btn-ghost" href="/#diagnostic">Faire le diagnostic de condition</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>
+      © <span id="year"></span> Younous Jonas · La Réunion
+      <br>
+      <span class="small">Ce site n’est pas un outil médical. Les diagnostics sont des miroirs : ils servent à reconnaître une condition (état d’opération).</span>
+    </p>
+  </div>
+</footer>
+<script src="/js/main.js"></script>
+<script>document.getElementById("year").textContent = String(new Date().getFullYear());</script>
+</body>
+</html>

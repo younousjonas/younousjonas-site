@@ -1,0 +1,182 @@
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Travaillez-vous pour exister ? · SUBRUN</title>
+  <meta name="description" content="Mini-diagnostic SUBRUN — Malbar : reconnaître le nœud, qualifier la condition, et choisir l’Île V2.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo" aria-label="Logo Younous Jonas">
+          <img src="/images/logo.png" alt="">
+        </div>
+        <div class="brand-title">
+          <strong>Younous Jonas</strong>
+          <span>Conditions · Île V1 · Île V2 · SUBRUN</span>
+        </div>
+      </div>
+
+      <nav aria-label="Navigation principale">
+        <a href="/#ilev2">l’Île V2</a>
+        <a href="/#diagnostic">Diagnostic</a>
+        <a href="/subrun/index.html">SUBRUN</a>
+        <a href="/#livres">Livres</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <h1 class="section-title">Travaillez-vous pour exister ?</h1>
+    <p class="lead">
+      <strong>Malbar</strong> — Le nœud de la reconnaissance.
+      Dix questions notées de 0 à 10. Calcule ton score, lis la condition, puis regarde la direction l’Île V2.
+    </p>
+
+    <div class="card">
+      <form class="form" name="diagnostic-subrun" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/merci.html" data-kind="subrun">
+        <input type="hidden" name="form-name" value="diagnostic-subrun">
+        <input type="hidden" name="noeud" value="MALBAR">
+        <p hidden><label>Ne pas remplir : <input name="bot-field"></label></p>
+
+
+        <div class="q">
+          <label>1) Croyez-vous profondément qu&#x27;il faut travailler dur pour mériter la reconnaissance ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q1">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>2) Avez-vous l&#x27;impression que vos accomplissements ne sont jamais suffisants ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q2">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>3) Transformez-vous votre valeur personnelle en performance — ce que vous FAITES plutôt que ce que vous ÊTES ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q3">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>4) Ressentez-vous une anxiété chronique malgré vos réussites ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q4">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>5) Avez-vous du mal à vous reposer, à ne rien faire, sans culpabilité ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q5">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>6) Portez-vous la pression de ne pas décevoir votre famille ou votre communauté ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q6">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>7) Avez-vous le sentiment de devoir prouver que &quot;les vôtres&quot; méritent le respect ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q7">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>8) Le regard des autres sur votre réussite est-il plus important que votre propre satisfaction ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q8">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>9) Avez-vous hérité de l&#x27;idée que la souffrance au travail est normale, voire nécessaire ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q9">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+
+        <div class="q">
+          <label>10) Ressentez-vous un vide quand vous n&#x27;avez pas de projet ou d&#x27;objectif à poursuivre ?</label>
+          <div class="range-row">
+            <input type="range" min="0" max="10" value="5" name="q10">
+            <div class="range-value">5</div>
+          </div>
+        </div>
+<div class="form-actions">
+          <button class="btn btn-ghost js-calc" type="button">Calculer mon score</button>
+          <button class="btn btn-primary" type="submit">Envoyer à Younous</button>
+        </div>
+
+        <div class="small">
+          L’envoi est optionnel. Si tu envoies, tes réponses arrivent à Younous (via Netlify Forms).
+        </div>
+
+        <div class="result js-result" style="display:none"></div>
+
+        <div class="result js-note" style="display:none">
+          <strong>Note</strong>
+          <p>
+            Ce diagnostic n’est pas un jugement. C’est un miroir.
+            Reconnaître un nœud est le premier pas pour le dénouer.
+          </p>
+        </div>
+
+        <hr class="sep">
+
+        <label class="small" for="email">Si tu veux être recontacté :</label>
+        <input id="email" type="email" name="email" placeholder="Ton email (optionnel)">
+      </form>
+    </div>
+
+    <div style="margin-top:18px" class="callout">
+      <strong>Direction l’Île V2</strong><br>
+      Quand ce nœud se transforme, l’Île V2 ressemble à une reconnaissance intérieure : l’être n’est plus confondu avec le faire. Le travail redevient un outil, pas une preuve d’existence. Le repos cesse d’être une faute.
+    </div>
+
+
+    <div style="margin-top:18px" class="form-actions">
+      <a class="btn btn-ghost" href="/subrun/index.html">Voir les 9 diagnostics</a>
+      <a class="btn btn-primary" href="https://www.amazon.fr/dp/B0F5HX4432" target="_blank" rel="noopener noreferrer">Lire le tome</a>
+      <a class="btn btn-ghost" href="/#diagnostic">Faire le diagnostic de condition</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>
+      © <span id="year"></span> Younous Jonas · La Réunion
+      <br>
+      <span class="small">Ce site n’est pas un outil médical. Les diagnostics sont des miroirs : ils servent à reconnaître une condition (état d’opération).</span>
+    </p>
+  </div>
+</footer>
+<script src="/js/main.js"></script>
+<script>document.getElementById("year").textContent = String(new Date().getFullYear());</script>
+</body>
+</html>
