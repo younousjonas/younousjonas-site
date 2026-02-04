@@ -1,4 +1,4 @@
-<!doctype html>
+h<!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
@@ -232,15 +232,31 @@
         </div>
 
         <div class="small">
-          L’envoi est optionnel. Si tu envoies, tes réponses arrivent à Younous par email (via Netlify Forms). Sinon, tu peux juste lire ton résultat à l’écran.
+            Tu peux voir ton résultat à l'écran sans envoyer. Mais si tu veux qu'on échange, remplis le formulaire ci-dessous.
         </div>
-
         <div class="result js-result" style="display:none"></div>
 
         <hr class="sep">
 
-        <label class="small" for="email">Si tu veux être recontacté :</label>
-        <input id="email" type="email" name="email" placeholder="Ton email (optionnel)">
+                  <div class="contact-fields">
+                                <p class="small"><strong>Pour envoyer ton diagnostic, remplis ces informations :</strong></p>p>
+                              <div class="field-row">
+                                            <label for="prenom">Prénom *</label>label>
+                                            <input id="prenom" type="text" name="prenom" placeholder="Ton prénom" required>
+                              </div>
+                              <div class="field-row">
+                                            <label for="nom">Nom *</label>label>
+                                            <input id="nom" type="text" name="nom" placeholder="Ton nom" required>
+                              </div>
+                              <div class="field-row">
+                                            <label for="whatsapp">WhatsApp *</label>label>
+                                            <input id="whatsapp" type="tel" name="whatsapp" placeholder="Ton numéro WhatsApp" required>
+                              </div>
+                              <div class="field-row">
+                                            <label for="email">Email *</label>label>
+                                            <input id="email" type="email" name="email" placeholder="Ton email" required>
+                              </div>
+                  </div>
       </form>
     </div>
   </div>
