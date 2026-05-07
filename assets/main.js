@@ -11,15 +11,23 @@ function setLinks(){
 function initForm(){
   const form=document.querySelector('#contact-form');
   if(!form)return;
+  const status=document.getElementById('formStatus');
   form.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    const c=cfg();
-    const data=Object.fromEntries(new FormData(form).entries());
-    const body=encodeURIComponent(`Bonjour Younous,%0D%0A%0D%0AJe viens depuis YounousJonas.com.%0D%0A%0D%0APrénom / nom : ${data.name||''}%0D%0AEmail : ${data.email||''}%0D%0ATéléphone : ${data.phone||''}%0D%0ASujet : ${data.subject||''}%0D%0A%0D%0AMessage :%0D%0A${data.message||''}`);
-    if(c.makeWebhookUrl){
-      try{ await fetch(c.makeWebhookUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,source:'younousjonas.com'})}); }catch(err){}
+    const formData=new FormData(form);
+    if(status) status.textContent='Envoi en cours…';
+    try{
+      const response=await fetch('/', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:new URLSearchParams(formData).toString()
+      });
+      if(!response.ok) throw new Error('HTTP '+response.status);
+      if(status) status.textContent='Message envoyé. Je lis et je réponds personnellement.';
+      form.reset();
+    }catch(err){
+      if(status) status.textContent='L’envoi n’a pas fonctionné. Écris directement à younousjonas@gmail.com.';
     }
-    window.location.href=`mailto:${c.email}?subject=${encodeURIComponent('Contact depuis YounousJonas.com - '+(data.subject||''))}&body=${body}`;
   });
 }
 document.addEventListener('DOMContentLoaded',()=>{setLinks();initForm();});
