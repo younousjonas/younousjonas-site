@@ -26,7 +26,7 @@ function initForm(){
       if(status) status.textContent='Message envoyé. Je lis et je réponds personnellement.';
       form.reset();
     }catch(err){
-      if(status) status.textContent='L’envoi n’a pas fonctionné. Écris directement à younousjonas@gmail.com.';
+      if(status) status.textContent='L’envoi n’a pas fonctionné. Écris directement à hello@younousjonas.com.';
     }
   });
 }
