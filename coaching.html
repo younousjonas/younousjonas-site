@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coaching individuel - Younous Jonas</title>
+  <meta name="description" content="Un accompagnement individuel avec Younous Jonas pour sortir du mode réaction. Trois formules : séance à l’unité, Sprint 2 mois, Approfondi 3 mois.">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/config.js"></script>
+  <script defer src="assets/main.js"></script>
+  <style>
+    /* Cartes de tarif — archétype propre à cette page, bâti sur les tokens et
+       les classes existantes (.tag, .btn, .container). Aucune autre page n’est
+       affectée (style local). */
+    .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:8px}
+    .plan{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:26px 24px;box-shadow:0 10px 30px rgba(0,0,0,.04)}
+    .plan.featured{border-color:var(--accent);box-shadow:0 18px 50px rgba(44,62,107,.14)}
+    .plan .tag{align-self:flex-start;margin-bottom:14px}
+    .plan h3{font-size:1.24rem;line-height:1.16;margin:0 0 10px;letter-spacing:-.02em}
+    .plan .price{font-size:2.4rem;font-weight:800;letter-spacing:-.04em;color:var(--ink);line-height:1;margin:0 0 8px}
+    .plan .meta{font-size:.92rem;color:var(--muted);margin:0 0 18px}
+    .plan .promise{color:var(--muted);margin:0 0 18px}
+    .plan .when{margin:0 0 22px}
+    .plan .when .label{display:block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:4px}
+    .plan .when p{margin:0;color:var(--ink);font-size:.96rem;line-height:1.4}
+    /* Pousse le bouton en bas : les CTA s’alignent d’une carte à l’autre malgré
+       des promesses de longueurs différentes. */
+    .plan .cta{margin-top:auto;width:100%}
+    @media(max-width:850px){.pricing{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="index.html">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="a-propos.html">À propos</a><a href="livres.html">Livres</a><a href="le-malokisme.html">Le Malokisme</a><a href="conferences.html">Conférences</a><a href="agenda.html">Agenda</a><a href="contact.html">Contact</a><a class="btn secondary" data-komsa href="https://www.komsa.re">Komsa.re</a></div><a class="btn mobile-toggle" href="contact.html">Contact</a></div></nav>
+
+<main><section class="section"><div class="container">
+<div class="kicker">Coaching individuel</div>
+<h1>Un accompagnement pour sortir du mode réaction.</h1>
+<p class="section-intro">Un coaching individuel avec Younous Jonas. Nous repérons ensemble ce qui vous fait réagir au lieu d’agir — ce qui se rejoue à votre insu et vous garde à l’effet. Une fois vu, cela se desserre : vous repassez à la cause et vous reprenez parole, création et direction.</p>
+
+<div class="pricing">
+
+  <article class="plan">
+    <h3>Séance à l’unité</h3>
+    <p class="price">300 €</p>
+    <p class="meta">1 séance · 1 h à 1 h 30</p>
+    <p class="promise">Un point précis qui se répète, vous fige ou vous fait réagir plus fort que la situation ne le demande. On le regarde ensemble, on le desserre — et le mouvement reprend. Sans engagement.</p>
+    <div class="when"><span class="label">Pour quand</span><p>Pour faire un essai, ou débloquer une question ponctuelle.</p></div>
+    <a class="btn secondary cta" href="https://buy.stripe.com/4gM4gybFRg2h6Yf97w8ww1W">Choisir cette formule</a>
+  </article>
+
+  <article class="plan featured">
+    <span class="tag">Le plus choisi</span>
+    <h3>Sprint — 2 mois</h3>
+    <p class="price">2 200 €</p>
+    <p class="meta">8 séances hebdomadaires · fenêtre de 2 mois</p>
+    <p class="promise">Quand un moment vous met sous pression — une transition, un conflit, une décision qui pèse — et que la réaction prend le pas sur l’action. Huit séances, une par semaine : une cadence pour sortir vite du mode réaction et reprendre la main, depuis la cause.</p>
+    <div class="when"><span class="label">Pour quand</span><p>Pour repasser à l’initiative quand l’enjeu est là, maintenant.</p></div>
+    <a class="btn cta" href="https://buy.stripe.com/8x24gy4dp03j5UberQ8ww1V">Choisir cette formule</a>
+  </article>
+
+  <article class="plan">
+    <h3>Approfondi — 3 mois</h3>
+    <p class="price">3 000 €</p>
+    <p class="meta">12 séances hebdomadaires · fenêtre de 3 mois</p>
+    <p class="promise">Un travail de fond. On reprend, domaine par domaine, ce qui vous fait subir au lieu d’agir — puis on ouvre la direction : ce que vous voulez vraiment, et le chemin pour y aller. Douze séances sur trois mois pour un changement qui s’installe en profondeur, parce qu’il a été vu, pas forcé.</p>
+    <div class="when"><span class="label">Pour quand</span><p>Pour un changement de fond, posé dans la durée.</p></div>
+    <a class="btn secondary cta" href="https://buy.stripe.com/eVq4gy25hcQ53M35Vk8ww1X">Choisir cette formule</a>
+  </article>
+
+</div>
+
+<p class="notice" style="margin-top:28px;max-width:790px">Entre les séances, un fil WhatsApp reste ouvert pour vos questions. Chaque séance dure 1 h à 1 h 30, en présentiel ou en visio. Coaching individuel (particulier) — un reçu vous est envoyé automatiquement après paiement.</p>
+
+</div></section></main>
+<footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a data-lemalokisme href="https://lemalokisme.com">LeMalokisme.com</a> · <a data-komsa href="https://www.komsa.re">Komsa.re</a> · <a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a></div></div></footer></body></html>
