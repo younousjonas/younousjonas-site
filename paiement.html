@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Réserver votre accompagnement - Younous Jonas</title>
+  <meta name="description" content="Réserver une formule de coaching individuel avec Younous Jonas. Paiement sécurisé, sans quitter le site.">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/config.js"></script>
+  <script defer src="assets/main.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    /* Page de paiement — bâtie sur les classes existantes (.form, .field-duo,
+       .consent, .notice, .btn). Quelques règles locales pour le récapitulatif
+       de formule et le bloc Stripe. */
+    .checkout{max-width:720px}
+    .summary{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:20px;padding:18px 20px;margin:0 0 24px}
+    .summary .label{display:block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:6px}
+    .summary select{max-width:340px}
+    .summary .price{font-size:1.8rem;font-weight:800;letter-spacing:-.03em;color:var(--ink);white-space:nowrap}
+    .step-title{font-size:1.1rem;font-weight:750;letter-spacing:-.01em;margin:28px 0 12px}
+    #payment-element{margin:6px 0 18px}
+    .pay-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .secure-note{font-size:.86rem;color:var(--muted);margin-top:14px}
+    [hidden]{display:none}
+  </style>
+</head>
+<body>
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="index.html">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="a-propos.html">À propos</a><a href="livres.html">Livres</a><a href="le-malokisme.html">Le Malokisme</a><a href="conferences.html">Conférences</a><a href="agenda.html">Agenda</a><a href="contact.html">Contact</a><a class="btn secondary" data-komsa href="https://www.komsa.re">Komsa.re</a></div><a class="btn mobile-toggle" href="contact.html">Contact</a></div></nav>
+
+<main><section class="section"><div class="container checkout">
+<div class="kicker">Coaching individuel</div>
+<h1>Réserver votre accompagnement.</h1>
+<p class="section-intro">Renseignez vos coordonnées, puis réglez en ligne — sans quitter le site. Vous recevez un reçu par email aussitôt le paiement confirmé.</p>
+
+<!-- Récapitulatif de formule (modifiable) -->
+<div class="summary">
+  <div>
+    <span class="label">Formule</span>
+    <select id="formule" aria-label="Choisir la formule">
+      <option value="unite">Séance à l’unité</option>
+      <option value="sprint">Sprint — 2 mois (8 séances)</option>
+      <option value="approfondi">Approfondi — 3 mois (12 séances)</option>
+    </select>
+  </div>
+  <span class="price" id="summary-price">—</span>
+</div>
+
+<!-- Étape 1 — capture des coordonnées (B2C : pas de SIRET) -->
+<form class="form" id="capture-form" novalidate>
+  <div class="field-duo">
+    <input name="prenom" placeholder="Prénom" autocomplete="given-name" aria-label="Prénom" required>
+    <input name="nom" placeholder="Nom" autocomplete="family-name" aria-label="Nom" required>
+  </div>
+  <input name="email" type="email" placeholder="Email" autocomplete="email" aria-label="Email" required>
+  <input name="telephone" type="tel" placeholder="Téléphone / WhatsApp" autocomplete="tel" aria-label="Téléphone" required>
+  <label class="consent"><input type="checkbox" name="consentement" value="oui" required><span>J’accepte que mes informations soient utilisées pour traiter mon inscription et mon paiement. Elles ne sont jamais cédées à un tiers.</span></label>
+  <button class="btn" type="submit" id="continue-btn">Continuer vers le paiement</button>
+  <p class="notice" id="capture-status" role="status" aria-live="polite"></p>
+</form>
+
+<!-- Étape 2 — paiement Stripe (Payment Element), révélée après l'étape 1 -->
+<div id="payment-step" hidden>
+  <div class="step-title">Paiement sécurisé</div>
+  <div id="payment-element"><!-- Stripe Payment Element monté ici --></div>
+  <div class="pay-row">
+    <button class="btn" id="pay-btn" type="button">Payer <span id="pay-amount"></span></button>
+    <a class="btn secondary" id="edit-btn" href="#">Modifier mes coordonnées</a>
+  </div>
+  <p class="notice" id="pay-status" role="status" aria-live="polite"></p>
+  <p class="secure-note">Paiement chiffré par Stripe. Vos informations de carte ne transitent jamais par ce site. Un reçu vous est envoyé automatiquement par email.</p>
+</div>
+
+</div></section></main>
+<footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a data-lemalokisme href="https://lemalokisme.com">LeMalokisme.com</a> · <a data-komsa href="https://www.komsa.re">Komsa.re</a> · <a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a></div></div></footer>
+
+<script>
+(function () {
+  // Prix d'affichage (l'autorité reste le serveur : create-payment-intent).
+  var FORMULES = {
+    unite:      { nom: "Séance à l’unité",            prix: "300 €" },
+    sprint:     { nom: "Sprint — 2 mois (8 séances)", prix: "2 200 €" },
+    approfondi: { nom: "Approfondi — 3 mois (12 séances)", prix: "3 000 €" }
+  };
+  var ENDPOINT = "/.netlify/functions/create-payment-intent";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var formuleSel = $("formule");
+  var summaryPrice = $("summary-price");
+  var captureForm = $("capture-form");
+  var captureStatus = $("capture-status");
+  var paymentStep = $("payment-step");
+  var payBtn = $("pay-btn");
+  var payAmount = $("pay-amount");
+  var payStatus = $("pay-status");
+  var continueBtn = $("continue-btn");
+
+  var stripe = null, elements = null;
+
+  // Pré-sélection depuis ?formule=… (défaut : sprint).
+  var params = new URLSearchParams(location.search);
+  var initial = params.get("formule");
+  if (!FORMULES[initial]) initial = "sprint";
+  formuleSel.value = initial;
+
+  function refreshPrice() {
+    var f = FORMULES[formuleSel.value];
+    summaryPrice.textContent = f ? f.prix : "—";
+    payAmount.textContent = f ? f.prix : "";
+  }
+  refreshPrice();
+  formuleSel.addEventListener("change", refreshPrice);
+
+  // --- Étape 1 : créer le PaymentIntent, monter le Payment Element ---------
+  captureForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    captureStatus.textContent = "";
+
+    if (!captureForm.consentement.checked) {
+      captureStatus.textContent = "Merci de cocher la case de consentement.";
+      return;
+    }
+    if (typeof Stripe === "undefined") {
+      captureStatus.textContent = "Le module de paiement n’a pas pu se charger. Réessayez ou écrivez à hello@younousjonas.com.";
+      return;
+    }
+
+    var body = {
+      formule: formuleSel.value,
+      consentement: true,
+      customer: {
+        prenom: captureForm.prenom.value.trim(),
+        nom: captureForm.nom.value.trim(),
+        email: captureForm.email.value.trim(),
+        telephone: captureForm.telephone.value.trim()
+      }
+    };
+    if (!body.customer.prenom || !body.customer.nom || !body.customer.email || !body.customer.telephone) {
+      captureStatus.textContent = "Merci de renseigner prénom, nom, email et téléphone.";
+      return;
+    }
+
+    continueBtn.disabled = true;
+    captureStatus.textContent = "Préparation du paiement…";
+
+    fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    })
+      .then(function (r) {
+        // Lire en texte puis tenter le JSON : une réponse non-JSON (404, page
+        // d'erreur HTML, fonction absente) ne doit pas remonter une erreur brute.
+        return r.text().then(function (t) {
+          var d = {};
+          try { d = t ? JSON.parse(t) : {}; } catch (e) { d = {}; }
+          return { ok: r.ok, d: d };
+        });
+      })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.d && res.d.error ? res.d.error : "Le paiement est momentanément indisponible. Réessayez, ou écrivez à hello@younousjonas.com.");
+        stripe = Stripe(res.d.publishable_key);
+        elements = stripe.elements({
+          clientSecret: res.d.client_secret,
+          appearance: { theme: "stripe", variables: { colorPrimary: "#2C3E6B", borderRadius: "12px" } }
+        });
+        elements.create("payment").mount("#payment-element");
+
+        captureForm.setAttribute("hidden", "");
+        formuleSel.setAttribute("disabled", "");
+        paymentStep.removeAttribute("hidden");
+        captureStatus.textContent = "";
+        paymentStep.scrollIntoView({ behavior: "smooth", block: "start" });
+      })
+      .catch(function (err) {
+        captureStatus.textContent = err.message || "Une erreur est survenue. Réessayez.";
+      })
+      .finally(function () { continueBtn.disabled = false; });
+  });
+
+  // Revenir à l'étape coordonnées.
+  $("edit-btn").addEventListener("click", function (e) {
+    e.preventDefault();
+    paymentStep.setAttribute("hidden", "");
+    captureForm.removeAttribute("hidden");
+    formuleSel.removeAttribute("disabled");
+  });
+
+  // --- Étape 2 : confirmer le paiement -------------------------------------
+  payBtn.addEventListener("click", function () {
+    if (!stripe || !elements) return;
+    payBtn.disabled = true;
+    payStatus.textContent = "Paiement en cours…";
+
+    stripe.confirmPayment({
+      elements: elements,
+      confirmParams: { return_url: location.origin + "/merci-coaching.html" }
+    }).then(function (result) {
+      // On n'arrive ici que si la confirmation échoue avant la redirection.
+      if (result.error) {
+        payStatus.textContent = result.error.message || "Le paiement n’a pas abouti. Vérifiez vos informations.";
+        payBtn.disabled = false;
+      }
+    });
+  });
+})();
+</script>
+</body></html>
