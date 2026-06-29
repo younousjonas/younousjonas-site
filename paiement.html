@@ -24,6 +24,9 @@
     #payment-element{margin:6px 0 18px}
     .pay-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
     .secure-note{font-size:.86rem;color:var(--muted);margin-top:14px}
+    /* Message d'erreur visible : sans état d'erreur, .notice reste gris discret
+       (charte) ; avec .error, encadré rouge clair pour être remarqué. */
+    .notice.error{color:#9B2C2C;background:#FBEAEA;border:1px solid #E7B8B8;border-radius:12px;padding:11px 14px;font-weight:600}
     [hidden]{display:none}
   </style>
 </head>
@@ -101,6 +104,14 @@
 
   var stripe = null, elements = null;
 
+  // Affiche un message d'état dans un <p class="notice">. isError => encadré
+  // rouge visible + défilement vers le message (sinon il passe inaperçu).
+  function setStatus(el, msg, isError) {
+    el.textContent = msg || "";
+    el.classList.toggle("error", !!(isError && msg));
+    if (isError && msg) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   // Pré-sélection depuis ?formule=… (défaut : sprint).
   var params = new URLSearchParams(location.search);
   var initial = params.get("formule");
@@ -129,14 +140,14 @@
   // --- Étape 1 : créer le PaymentIntent, monter le Payment Element ---------
   captureForm.addEventListener("submit", function (e) {
     e.preventDefault();
-    captureStatus.textContent = "";
+    setStatus(captureStatus, "");
 
     if (!captureForm.consentement.checked) {
-      captureStatus.textContent = "Merci de cocher la case de consentement.";
+      setStatus(captureStatus, "Merci de cocher la case de consentement.", true);
       return;
     }
     if (typeof Stripe === "undefined") {
-      captureStatus.textContent = "Le module de paiement n’a pas pu se charger. Réessayez ou écrivez à hello@younousjonas.com.";
+      setStatus(captureStatus, "Le module de paiement n’a pas pu se charger. Réessayez ou écrivez à hello@younousjonas.com.", true);
       return;
     }
 
@@ -151,12 +162,12 @@
       }
     };
     if (!body.customer.prenom || !body.customer.nom || !body.customer.email || !body.customer.telephone) {
-      captureStatus.textContent = "Merci de renseigner prénom, nom, email et téléphone.";
+      setStatus(captureStatus, "Merci de renseigner prénom, nom, email et téléphone.", true);
       return;
     }
 
     continueBtn.disabled = true;
-    captureStatus.textContent = "Préparation du paiement…";
+    setStatus(captureStatus, "Préparation du paiement…");
 
     fetch(ENDPOINT, {
       method: "POST",
@@ -184,11 +195,11 @@
         captureForm.setAttribute("hidden", "");
         formuleSel.setAttribute("disabled", "");
         paymentStep.removeAttribute("hidden");
-        captureStatus.textContent = "";
+        setStatus(captureStatus, "");
         paymentStep.scrollIntoView({ behavior: "smooth", block: "start" });
       })
       .catch(function (err) {
-        captureStatus.textContent = err.message || "Une erreur est survenue. Réessayez.";
+        setStatus(captureStatus, err.message || "Une erreur est survenue. Réessayez.", true);
       })
       .finally(function () { continueBtn.disabled = false; });
   });
@@ -205,7 +216,7 @@
   payBtn.addEventListener("click", function () {
     if (!stripe || !elements) return;
     payBtn.disabled = true;
-    payStatus.textContent = "Paiement en cours…";
+    setStatus(payStatus, "Paiement en cours…");
 
     stripe.confirmPayment({
       elements: elements,
@@ -213,7 +224,7 @@
     }).then(function (result) {
       // On n'arrive ici que si la confirmation échoue avant la redirection.
       if (result.error) {
-        payStatus.textContent = result.error.message || "Le paiement n’a pas abouti. Vérifiez vos informations.";
+        setStatus(payStatus, result.error.message || "Le paiement n’a pas abouti. Vérifiez vos informations.", true);
         payBtn.disabled = false;
       }
     });
