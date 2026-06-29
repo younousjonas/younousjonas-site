@@ -118,15 +118,24 @@
   if (!FORMULES[initial]) initial = "sprint";
   formuleSel.value = initial;
 
-  // Verrou formule : un acheteur arrivé via ?formule=mako ne doit pas pouvoir
-  // basculer sur une formule coaching. On masque le menu et on affiche le nom
-  // de la formule en libellé fixe (le prix reste visible à droite).
+  // Mako ≠ coaching individuel : c'est un parcours de groupe (tutoiement).
+  // Quand ?formule=mako, on verrouille la formule (l'acheteur ne doit pas
+  // basculer sur du coaching) ET on adapte l'habillage de la page (kicker,
+  // titre, intro, onglet) pour ne pas afficher « Coaching individuel ».
   if (initial === "mako") {
     formuleSel.hidden = true;
     var fixedLabel = document.createElement("span");
     fixedLabel.className = "formule-fixed";
     fixedLabel.textContent = FORMULES.mako.nom;
     formuleSel.parentNode.appendChild(fixedLabel);
+
+    var kicker = document.querySelector(".checkout .kicker");
+    var titre = document.querySelector(".checkout h1");
+    var intro = document.querySelector(".checkout .section-intro");
+    if (kicker) kicker.textContent = "Mako — parcours";
+    if (titre) titre.textContent = "Réserve ta place.";
+    if (intro) intro.textContent = "Renseigne tes coordonnées, puis règle en ligne — sans quitter le site. Tu reçois un reçu par email aussitôt le paiement confirmé.";
+    document.title = "Réserver ma place — Mako";
   }
 
   function refreshPrice() {
@@ -220,7 +229,7 @@
 
     stripe.confirmPayment({
       elements: elements,
-      confirmParams: { return_url: location.origin + "/merci-coaching.html" }
+      confirmParams: { return_url: location.origin + (formuleSel.value === "mako" ? "/merci-mako.html" : "/merci-coaching.html") }
     }).then(function (result) {
       // On n'arrive ici que si la confirmation échoue avant la redirection.
       if (result.error) {
