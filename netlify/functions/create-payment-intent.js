@@ -43,6 +43,13 @@ const FORMULES = {
     price_id: "price_1TmOkXCUcXJfZOaAIeckLZ4u",
     product_id: "prod_UlwdyCgPm3FNBF",
   },
+  mako: {
+    montant_cents: 9900,
+    motif: "Mako — session de lancement",
+    price_id: "price_1Tnf79CUcXJfZOaAVLWOaU07",
+    product_id: "prod_UnFcAAWfDg0d0t",
+    tag_palier_source: "N4_inscription",
+  },
 };
 
 const json = (statusCode, body) => ({
@@ -108,7 +115,7 @@ exports.handler = async (event) => {
   const metadata = {
     source_site: "younousjonas.com",
     entite: "Run Coaching",
-    tag_palier_source: "N4_coaching",
+    tag_palier_source: formule.tag_palier_source || "N4_coaching",
     type_piece: "Reçu",
     motif: formule.motif,
     formule: formuleCle,

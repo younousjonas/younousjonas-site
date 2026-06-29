@@ -18,6 +18,7 @@
     .summary{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:20px;padding:18px 20px;margin:0 0 24px}
     .summary .label{display:block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:6px}
     .summary select{max-width:340px}
+    .summary .formule-fixed{font-size:1.05rem;font-weight:750;letter-spacing:-.01em;color:var(--ink)}
     .summary .price{font-size:1.8rem;font-weight:800;letter-spacing:-.03em;color:var(--ink);white-space:nowrap}
     .step-title{font-size:1.1rem;font-weight:750;letter-spacing:-.01em;margin:28px 0 12px}
     #payment-element{margin:6px 0 18px}
@@ -42,6 +43,7 @@
       <option value="unite">Séance à l’unité</option>
       <option value="sprint">Sprint — 2 mois (8 séances)</option>
       <option value="approfondi">Approfondi — 3 mois (12 séances)</option>
+      <option value="mako">Mako — session de lancement</option>
     </select>
   </div>
   <span class="price" id="summary-price">—</span>
@@ -81,7 +83,8 @@
   var FORMULES = {
     unite:      { nom: "Séance à l’unité",            prix: "300 €" },
     sprint:     { nom: "Sprint — 2 mois (8 séances)", prix: "2 200 €" },
-    approfondi: { nom: "Approfondi — 3 mois (12 séances)", prix: "3 000 €" }
+    approfondi: { nom: "Approfondi — 3 mois (12 séances)", prix: "3 000 €" },
+    mako:       { nom: "Mako — session de lancement", prix: "99 €" }
   };
   var ENDPOINT = "/.netlify/functions/create-payment-intent";
 
@@ -103,6 +106,17 @@
   var initial = params.get("formule");
   if (!FORMULES[initial]) initial = "sprint";
   formuleSel.value = initial;
+
+  // Verrou formule : un acheteur arrivé via ?formule=mako ne doit pas pouvoir
+  // basculer sur une formule coaching. On masque le menu et on affiche le nom
+  // de la formule en libellé fixe (le prix reste visible à droite).
+  if (initial === "mako") {
+    formuleSel.hidden = true;
+    var fixedLabel = document.createElement("span");
+    fixedLabel.className = "formule-fixed";
+    fixedLabel.textContent = FORMULES.mako.nom;
+    formuleSel.parentNode.appendChild(fixedLabel);
+  }
 
   function refreshPrice() {
     var f = FORMULES[formuleSel.value];
