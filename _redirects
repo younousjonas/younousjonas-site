@@ -3,3 +3,6 @@
 # Docs internes du dépôt — jamais servis en public (balayage confidentialité 02/07/2026)
 /readme_deploiement.md /404 404!
 /README_DEPLOIEMENT.md /404 404!
+# Sources des fonctions : servies comme fichiers statiques (publish = racine) alors que
+# l'invocation passe par /.netlify/functions/* — on bloque la lecture du code.
+/netlify/functions/* /404 404!
