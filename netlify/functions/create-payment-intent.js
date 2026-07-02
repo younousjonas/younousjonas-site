@@ -93,6 +93,7 @@ exports.handler = async (event) => {
   const email = String(c.email || "").trim();
   const telephone = String(c.telephone || "").trim();
   const consentement = payload.consentement === true;
+  const renonciation = payload.renonciation === true;
 
   // Règle Central Files : prénom + nom séparés, téléphone OBLIGATOIRE.
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -100,6 +101,16 @@ exports.handler = async (event) => {
     return json(400, {
       error:
         "Champs requis manquants (prénom, nom, email valide, téléphone, consentement).",
+    });
+  }
+
+  // Contenu numérique (mako) : la renonciation au droit de rétractation doit
+  // être recueillie à l'achat (art. L221-28 C. conso — pack légal §4.2).
+  // Le front l'exige déjà ; on revalide ici, le client ne peut pas contourner.
+  if (formuleCle === "mako" && !renonciation) {
+    return json(400, {
+      error:
+        "Pour un accès immédiat au contenu, la renonciation au droit de rétractation doit être cochée.",
     });
   }
 
@@ -126,6 +137,11 @@ exports.handler = async (event) => {
     email,
     telephone,
   };
+  // Preuve de recueil (horodatée par le PaymentIntent lui-même) : ne voyage
+  // dans les métadonnées que pour le contenu numérique.
+  if (formuleCle === "mako") {
+    metadata.renonciation_retractation = "oui — accès immédiat demandé (L221-28)";
+  }
   for (const [k, v] of Object.entries(metadata)) {
     params.set(`metadata[${k}]`, v);
   }
