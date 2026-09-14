@@ -167,4 +167,40 @@
   <div>&copy; Younous Jonas - Komsa Éditions</div>
   <div><a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> &middot; <a href="/mentions-legales.html">Mentions légales</a> &middot; <a href="/confidentialite.html">Confidentialité</a></div>
 </div></footer>
+
+<script>
+/* Relais d'envoi AJAX, limité à cette page.
+   Pourquoi : assets/main.js se branche sur le sélecteur `form[data-netlify]`,
+   mais Netlify RETIRE cet attribut du HTML servi une fois le formulaire détecté
+   au déploiement. Le sélecteur ne matche donc plus en ligne, l'envoi part en POST
+   natif et l'utilisateur atterrit sur la page « Thank you! » brute de Netlify —
+   fin de parcours rude pour quelqu'un qui vient d'écrire une feuille intime.
+   On reprend ici le même comportement que main.js, mais branché sur le nom du
+   formulaire, qui survit au déploiement.
+   Le garde-fou ci-dessous évite le double envoi en local (où data-netlify est
+   encore présent et où main.js fait donc déjà le travail).
+   Sans JavaScript, le POST natif fonctionne toujours : la feuille est enregistrée. */
+(function () {
+  var form = document.querySelector('form[name="feuille-de-jugement"]');
+  if (!form || form.hasAttribute('data-netlify')) return;
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var statut = form.querySelector('[role="status"]');
+    if (statut) statut.textContent = 'Envoi en cours…';
+    try {
+      var reponse = await fetch(location.pathname, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(new FormData(form)).toString()
+      });
+      if (!reponse.ok) throw new Error('HTTP ' + reponse.status);
+      if (statut) statut.textContent = form.dataset.success || 'Feuille reçue.';
+      form.reset();
+    } catch (err) {
+      if (statut) statut.textContent = 'L’envoi n’a pas fonctionné. Écrivez-moi directement à hello@younousjonas.com.';
+    }
+  });
+})();
+</script>
 </body></html>
