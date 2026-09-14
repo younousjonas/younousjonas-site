@@ -39,15 +39,12 @@
     .fdj-q-num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--accent);font-weight:800;font-size:.9rem;display:inline-flex;align-items:center;justify-content:center}
     .fdj-q-titre{font-weight:700;font-size:1.02rem;line-height:1.4;letter-spacing:-.01em}
     .fdj-q textarea{background:var(--card)}
-    /* Groupe de radios : le fieldset ne sert qu'à porter la legend (accessibilité),
-       il ne doit rien changer visuellement. */
-    .fdj-group{display:block}
-    .fdj-choix{display:flex;gap:22px;flex-wrap:wrap;margin-top:10px}
-    .fdj-choix label{display:inline-flex;align-items:center;gap:8px;font-size:.98rem;color:#3C3936;cursor:pointer}
-    .fdj-choix input{width:auto;flex-shrink:0;accent-color:var(--accent)} /* assets/style.css met width:100% sur input */
+    /* Menus Oui/Non : assets/style.css habille déjà input/textarea/select ;
+       on borne la largeur pour ne pas étirer un choix binaire sur toute la carte. */
+    .fdj-q select{background:var(--card);max-width:240px}
     /* Champs auto-extensibles : la hauteur est pilotée en JS. */
     .fdj textarea{min-height:96px;overflow:hidden}
-    .fdj input.touched:invalid,.fdj textarea.touched:invalid{border-color:#B4453A}
+    .fdj input.touched:invalid,.fdj textarea.touched:invalid,.fdj select.touched:invalid{border-color:#B4453A}
     .fdj-actions{margin-top:30px;display:grid;gap:14px;justify-items:start}
     .fdj-erreur{display:none;color:#B4453A;font-size:.92rem;margin:0}
     .fdj-consent{font-size:.88rem;color:var(--muted);max-width:56ch;margin:0}
@@ -150,23 +147,26 @@
           <p class="fdj-hint">Reprenez une seule phrase de vos réponses ci-dessus — souvent la question 1. Ex. « … devrait m'écouter ».</p>
           <textarea id="affirmation" name="tw_affirmation" required placeholder="La pensée à examiner, une seule."></textarea></div>
 
-        <!-- Groupes de radios en fieldset/legend : seul moyen d'associer la question
-             à ses deux réponses pour un lecteur d'écran (accessibilité AA). -->
-        <div class="fdj-q"><fieldset class="fdj-group">
-          <legend class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">1</span>
-            <span class="fdj-q-titre">Est-ce vrai ?<span class="fdj-req">*</span></span></legend>
-          <div class="fdj-choix">
-            <label><input type="radio" name="tw_q1" value="Oui" required> Oui</label>
-            <label><input type="radio" name="tw_q1" value="Non" required> Non</label>
-          </div></fieldset></div>
+        <!-- Menus déroulants plutôt que boutons radio : Netlify n'associe aucune
+             étiquette à un groupe de radios (ni <legend>, ni les <label> des
+             options) et affichait « Tw Q1 » / « Tw Q2 » dans l'email de
+             notification. Un <select> porte un <label for>, que Netlify sait lire.
+             Valeurs et obligation inchangées. -->
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">1</span>
+          <label class="fdj-q-titre" for="tw_q1">Est-ce vrai ?<span class="fdj-req">*</span></label></div>
+          <select id="tw_q1" name="tw_q1" required>
+            <option value="" disabled selected>Choisir…</option>
+            <option value="Oui">Oui</option>
+            <option value="Non">Non</option>
+          </select></div>
 
-        <div class="fdj-q"><fieldset class="fdj-group">
-          <legend class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">2</span>
-            <span class="fdj-q-titre">Pouvez-vous savoir avec certitude que c'est vrai ?<span class="fdj-req">*</span></span></legend>
-          <div class="fdj-choix">
-            <label><input type="radio" name="tw_q2" value="Oui" required> Oui</label>
-            <label><input type="radio" name="tw_q2" value="Non" required> Non</label>
-          </div></fieldset></div>
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">2</span>
+          <label class="fdj-q-titre" for="tw_q2">Pouvez-vous savoir avec certitude que c'est vrai ?<span class="fdj-req">*</span></label></div>
+          <select id="tw_q2" name="tw_q2" required>
+            <option value="" disabled selected>Choisir…</option>
+            <option value="Oui">Oui</option>
+            <option value="Non">Non</option>
+          </select></div>
 
         <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">3</span>
           <label class="fdj-q-titre" for="tw_q3">Comment réagissez-vous, que se passe-t-il, quand vous croyez cette pensée ?<span class="fdj-req">*</span></label></div>
