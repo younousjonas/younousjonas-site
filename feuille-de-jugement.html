@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feuille de jugement - Younous Jonas</title>
+  <!-- Page cachée : non indexée, absente du sitemap, non liée depuis la navigation.
+       Voir aussi robots.txt (Disallow: /feuille-de-jugement). -->
+  <meta name="robots" content="noindex, nofollow">
+  <!-- Chemins racine-relatifs : la page est servie à la fois sur /feuille-de-jugement
+       et /feuille-de-jugement.html ; les chemins relatifs seraient fragiles. -->
+  <link rel="stylesheet" href="/assets/style.css">
+  <script src="/assets/config.js"></script>
+  <script defer src="/assets/main.js"></script>
+  <style>
+    /* Styles propres à cette page, scopés sous .fdj-* : aucune modification
+       de assets/style.css, donc aucun effet sur le reste du site. */
+    .fdj-head{padding:56px 0 8px}
+    .fdj-head h1{font-size:clamp(2.1rem,5vw,3.4rem)}
+    .fdj-wrap{padding:24px 0 76px}
+    .fdj{gap:0}
+    .fdj fieldset{border:0;margin:0;padding:0;min-width:0} /* min-width:0 : évite le débordement mobile des fieldset */
+    .fdj legend{padding:0}
+    .fdj-part{padding:26px 0 4px;border-top:1px solid var(--line)}
+    .fdj-part:first-of-type{border-top:0;padding-top:4px}
+    .fdj-part-title{font-size:1.3rem;font-weight:750;letter-spacing:-.025em;margin:0 0 6px}
+    .fdj-part-intro{font-size:.95rem;color:var(--muted);margin:0}
+    .fdj-field{display:grid;gap:8px;margin:20px 0 0}
+    .fdj-field > label,.fdj-label{font-weight:700;font-size:.98rem;line-height:1.4;letter-spacing:-.01em}
+    .fdj-num{color:var(--accent);font-weight:800;margin-right:6px}
+    .fdj-hint{font-size:.88rem;color:var(--muted);line-height:1.45;margin:0;font-weight:400}
+    .fdj-duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+    .fdj-duo .fdj-field{margin-top:0}
+    /* Radios Oui/Non : largeur auto, car assets/style.css met width:100% sur input. */
+    .fdj-choice{display:flex;gap:22px;flex-wrap:wrap;margin-top:2px}
+    .fdj-choice label{display:inline-flex;align-items:center;gap:8px;font-size:.98rem;cursor:pointer}
+    .fdj-choice input{width:auto;flex-shrink:0}
+    .fdj-submit{margin-top:28px;display:grid;gap:12px;justify-items:start}
+    .fdj-credit{font-size:.88rem;color:var(--muted);line-height:1.5;margin:22px 0 0;padding-top:18px;border-top:1px solid var(--line)}
+    .fdj-credit a{color:var(--accent);font-weight:700}
+    @media(max-width:520px){.fdj-duo{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+<!-- Navigation réduite à la marque : la page est hors parcours de navigation. -->
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="/">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a></div></nav>
+
+<main>
+  <section class="fdj-head"><div class="container">
+    <div class="kicker">Défaire le retournement</div>
+    <h1>Feuille de jugement.</h1>
+    <p class="lead">Cette feuille se remplit avant votre passage. Écrivez court, précis, sans vous corriger : ce sont les phrases telles qu'elles vous viennent qui font le travail. Je lis chaque feuille et je réponds personnellement.</p>
+    <p class="notice">Ce que vous écrivez ici n'arrive qu'à moi. Rien n'est publié, rien n'est transmis à un tiers. <a href="/confidentialite.html">Confidentialité</a>.</p>
+  </div></section>
+
+  <section class="fdj-wrap"><div class="container">
+    <!-- Netlify Forms : détection au build sur le HTML statique livré.
+         Requis = name du <form>, data-netlify, champ caché form-name, honeypot bot-field.
+         L'envoi est intercepté par assets/main.js (POST AJAX vers "/"). -->
+    <form class="form fdj" name="feuille-de-jugement" method="POST" data-netlify="true" data-netlify-honeypot="bot-field"
+          data-success="Feuille reçue. Je la lis et je vous réponds personnellement.">
+      <input type="hidden" name="form-name" value="feuille-de-jugement">
+      <p class="hp"><label>Ne pas remplir <input name="bot-field"></label></p>
+
+      <!-- ---------- 1. Identité et cadre ---------- -->
+      <fieldset class="fdj-part">
+        <legend class="fdj-part-title">Vous</legend>
+        <p class="fdj-part-intro">Pour que je puisse vous retrouver et vous répondre.</p>
+
+        <div class="fdj-duo">
+          <div class="fdj-field"><label for="fdj-prenom">Prénom</label>
+            <input id="fdj-prenom" name="prenom" autocomplete="given-name" required></div>
+          <div class="fdj-field"><label for="fdj-nom">Nom</label>
+            <input id="fdj-nom" name="nom" autocomplete="family-name" required></div>
+        </div>
+
+        <div class="fdj-field"><label for="fdj-email">Email</label>
+          <input id="fdj-email" name="email" type="email" autocomplete="email" required></div>
+
+        <div class="fdj-field"><label for="fdj-whatsapp">WhatsApp <span class="fdj-hint">(facultatif)</span></label>
+          <input id="fdj-whatsapp" name="whatsapp" type="tel" autocomplete="tel"></div>
+
+        <div class="fdj-field"><label for="fdj-date">Date de votre passage</label>
+          <input id="fdj-date" name="date_passage" type="date" required></div>
+
+        <div class="fdj-field"><label for="fdj-situation">La situation</label>
+          <p class="fdj-hint">En quelques lignes : où cela se passe, avec qui, et à quel moment précis vous vous situez pour remplir cette feuille.</p>
+          <textarea id="fdj-situation" name="situation" required></textarea></div>
+      </fieldset>
+
+      <!-- ---------- 2. La feuille de jugement (6 questions) ---------- -->
+      <fieldset class="fdj-part">
+        <legend class="fdj-part-title">La feuille de jugement</legend>
+        <p class="fdj-part-intro">Restez sur une seule personne et un seul moment. Jugez sans retenue, à la première personne, au présent : c'est ici que l'on écrit ce qu'on ne dit pas.</p>
+
+        <div class="fdj-field"><label for="fdj-q1"><span class="fdj-num">1.</span> Qui vous met en colère, vous trouble, vous blesse, vous attriste ou vous déçoit, et pourquoi ? Qu'est-ce qui, chez cette personne, ne vous convient pas ?</label>
+          <textarea id="fdj-q1" name="q1" required></textarea></div>
+
+        <div class="fdj-field"><label for="fdj-q2"><span class="fdj-num">2.</span> Comment voulez-vous qu'elle change ? Qu'attendez-vous d'elle ?</label>
+          <textarea id="fdj-q2" name="q2" required></textarea></div>
+
+        <div class="fdj-field"><label for="fdj-q3"><span class="fdj-num">3.</span> Que devrait-elle faire, ou ne pas faire, penser, être ? Quel conseil lui donneriez-vous ?</label>
+          <textarea id="fdj-q3" name="q3" required></textarea></div>
+
+        <div class="fdj-field"><label for="fdj-q4"><span class="fdj-num">4.</span> De quoi avez-vous besoin de sa part pour être heureux ?</label>
+          <textarea id="fdj-q4" name="q4" required></textarea></div>
+
+        <div class="fdj-field"><label for="fdj-q5"><span class="fdj-num">5.</span> Que pensez-vous d'elle ? Faites la liste.</label>
+          <textarea id="fdj-q5" name="q5" required></textarea></div>
+
+        <div class="fdj-field"><label for="fdj-q6"><span class="fdj-num">6.</span> Qu'est-ce que vous ne voulez plus jamais vivre avec cette personne, ou dans cette situation ?</label>
+          <textarea id="fdj-q6" name="q6" required></textarea></div>
+      </fieldset>
+
+      <!-- ---------- 3. Le travail (4 questions + retournements) ---------- -->
+      <fieldset class="fdj-part">
+        <legend class="fdj-part-title">Le travail</legend>
+        <p class="fdj-part-intro">Reprenez une seule phrase de ce que vous venez d'écrire — la plus chargée — et passez-la aux quatre questions, puis aux retournements.</p>
+
+        <div class="fdj-field"><label for="fdj-tw-aff">L'affirmation que vous questionnez</label>
+          <p class="fdj-hint">Une phrase, telle qu'elle est écrite plus haut.</p>
+          <textarea id="fdj-tw-aff" name="tw_affirmation" required></textarea></div>
+
+        <div class="fdj-field"><span class="fdj-label"><span class="fdj-num">1.</span> Est-ce vrai ?</span>
+          <div class="fdj-choice">
+            <label><input type="radio" name="tw_q1" value="Oui" required> Oui</label>
+            <label><input type="radio" name="tw_q1" value="Non"> Non</label>
+          </div></div>
+
+        <div class="fdj-field"><span class="fdj-label"><span class="fdj-num">2.</span> Pouvez-vous savoir avec une certitude absolue que c'est vrai ?</span>
+          <div class="fdj-choice">
+            <label><input type="radio" name="tw_q2" value="Oui" required> Oui</label>
+            <label><input type="radio" name="tw_q2" value="Non"> Non</label>
+          </div></div>
+
+        <div class="fdj-field"><label for="fdj-tw-q3"><span class="fdj-num">3.</span> Comment réagissez-vous, que se passe-t-il, quand vous croyez cette pensée ?</label>
+          <textarea id="fdj-tw-q3" name="tw_q3" required></textarea></div>
+
+        <div class="fdj-field"><label for="fdj-tw-q4"><span class="fdj-num">4.</span> Qui seriez-vous sans cette pensée ?</label>
+          <textarea id="fdj-tw-q4" name="tw_q4" required></textarea></div>
+
+        <div class="fdj-field"><label for="fdj-inv-soi">Retournement vers vous-même</label>
+          <p class="fdj-hint">Réécrivez l'affirmation en la tournant vers vous, puis donnez des exemples concrets et véritables.</p>
+          <textarea id="fdj-inv-soi" name="tw_inv_soi" required></textarea></div>
+
+        <div class="fdj-field"><label for="fdj-inv-autre">Retournement vers l'autre</label>
+          <p class="fdj-hint">La même affirmation, tournée vers l'autre personne. Exemples concrets.</p>
+          <textarea id="fdj-inv-autre" name="tw_inv_autre" required></textarea></div>
+
+        <div class="fdj-field"><label for="fdj-inv-oppose">Retournement à l'opposé</label>
+          <p class="fdj-hint">La même affirmation, inversée. Exemples concrets.</p>
+          <textarea id="fdj-inv-oppose" name="tw_inv_oppose" required></textarea></div>
+      </fieldset>
+
+      <div class="fdj-submit">
+        <button class="btn" type="submit">Envoyer ma feuille</button>
+        <p class="notice" id="formStatus" role="status" aria-live="polite"></p>
+      </div>
+
+      <p class="fdj-credit">La feuille de jugement et les quatre questions sont l'œuvre de Byron Katie — <a href="https://thework.com" target="_blank" rel="noopener">thework.com</a>.</p>
+    </form>
+  </div></section>
+</main>
+
+<footer class="footer"><div class="container footer-inner">
+  <div>&copy; Younous Jonas - Komsa Éditions</div>
+  <div><a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> &middot; <a href="/mentions-legales.html">Mentions légales</a> &middot; <a href="/confidentialite.html">Confidentialité</a></div>
+</div></footer>
+</body></html>

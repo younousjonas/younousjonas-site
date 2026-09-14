@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
+# Page cachée (préparation parcours) : accessible par lien direct, jamais indexée.
+# Couvre /feuille-de-jugement et /feuille-de-jugement.html (correspondance par préfixe).
+Disallow: /feuille-de-jugement
+
 Sitemap: https://www.younousjonas.com/sitemap.xml
