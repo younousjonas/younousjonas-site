@@ -31,6 +31,10 @@
     .fdj-hint{font-size:.88rem;color:var(--muted);line-height:1.45;margin:0;font-weight:400}
     .fdj-duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
     .fdj-duo .fdj-field{margin-top:0}
+    /* Groupe de radios : le fieldset ne sert qu'à porter la legend (accessibilité),
+       il ne doit rien changer visuellement. */
+    .fdj-group{display:block}
+    .fdj-group legend{margin:0 0 8px}
     /* Radios Oui/Non : largeur auto, car assets/style.css met width:100% sur input. */
     .fdj-choice{display:flex;gap:22px;flex-wrap:wrap;margin-top:2px}
     .fdj-choice label{display:inline-flex;align-items:center;gap:8px;font-size:.98rem;cursor:pointer}
@@ -122,17 +126,21 @@
           <p class="fdj-hint">Une phrase, telle qu'elle est écrite plus haut.</p>
           <textarea id="fdj-tw-aff" name="tw_affirmation" required></textarea></div>
 
-        <div class="fdj-field"><span class="fdj-label"><span class="fdj-num">1.</span> Est-ce vrai ?</span>
+        <!-- Groupes de radios en fieldset/legend : seul moyen d'associer la question
+             à ses deux réponses pour un lecteur d'écran (accessibilité AA). -->
+        <div class="fdj-field"><fieldset class="fdj-group">
+          <legend class="fdj-label"><span class="fdj-num">1.</span> Est-ce vrai ?</legend>
           <div class="fdj-choice">
             <label><input type="radio" name="tw_q1" value="Oui" required> Oui</label>
             <label><input type="radio" name="tw_q1" value="Non"> Non</label>
-          </div></div>
+          </div></fieldset></div>
 
-        <div class="fdj-field"><span class="fdj-label"><span class="fdj-num">2.</span> Pouvez-vous savoir avec une certitude absolue que c'est vrai ?</span>
+        <div class="fdj-field"><fieldset class="fdj-group">
+          <legend class="fdj-label"><span class="fdj-num">2.</span> Pouvez-vous savoir avec une certitude absolue que c'est vrai ?</legend>
           <div class="fdj-choice">
             <label><input type="radio" name="tw_q2" value="Oui" required> Oui</label>
             <label><input type="radio" name="tw_q2" value="Non"> Non</label>
-          </div></div>
+          </div></fieldset></div>
 
         <div class="fdj-field"><label for="fdj-tw-q3"><span class="fdj-num">3.</span> Comment réagissez-vous, que se passe-t-il, quand vous croyez cette pensée ?</label>
           <textarea id="fdj-tw-q3" name="tw_q3" required></textarea></div>
