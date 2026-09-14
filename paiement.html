@@ -61,6 +61,10 @@
   <input name="email" type="email" placeholder="Email" autocomplete="email" aria-label="Email" required>
   <input name="telephone" type="tel" placeholder="Téléphone / WhatsApp" autocomplete="tel" aria-label="Téléphone" required>
   <label class="consent"><input type="checkbox" name="consentement" value="oui" required><span>J’accepte que mes informations soient utilisées pour traiter mon inscription et mon paiement. Elles ne sont jamais cédées à un tiers.</span></label>
+  <!-- Contenu numérique (Mako) : renonciation au droit de rétractation exigée
+       à l'achat (art. L221-28 C. conso — pack légal §4.2). Affichée et requise
+       uniquement pour la formule mako ; revalidée côté serveur. -->
+  <label class="consent" id="renonciation-bloc" hidden><input type="checkbox" name="renonciation" value="oui"><span>Je demande l’accès immédiat au contenu et renonce à mon droit de rétractation. Je reconnais qu’une fois l’accès ouvert, je perds ce droit (art. L221-28 du Code de la consommation).</span></label>
   <button class="btn" type="submit" id="continue-btn">Continuer vers le paiement</button>
   <p class="notice" id="capture-status" role="status" aria-live="polite"></p>
 </form>
@@ -142,6 +146,12 @@
     var f = FORMULES[formuleSel.value];
     summaryPrice.textContent = f ? f.prix : "—";
     payAmount.textContent = f ? f.prix : "";
+    // Renonciation à la rétractation : uniquement pour le contenu numérique (mako).
+    var renonBloc = $("renonciation-bloc");
+    if (renonBloc) {
+      if (formuleSel.value === "mako") renonBloc.removeAttribute("hidden");
+      else { renonBloc.setAttribute("hidden", ""); captureForm.renonciation.checked = false; }
+    }
   }
   refreshPrice();
   formuleSel.addEventListener("change", refreshPrice);
@@ -155,6 +165,10 @@
       setStatus(captureStatus, "Merci de cocher la case de consentement.", true);
       return;
     }
+    if (formuleSel.value === "mako" && !captureForm.renonciation.checked) {
+      setStatus(captureStatus, "Pour accéder au contenu immédiatement, merci de cocher la case de renonciation au droit de rétractation.", true);
+      return;
+    }
     if (typeof Stripe === "undefined") {
       setStatus(captureStatus, "Le module de paiement n’a pas pu se charger. Réessayez ou écrivez à hello@younousjonas.com.", true);
       return;
@@ -163,6 +177,7 @@
     var body = {
       formule: formuleSel.value,
       consentement: true,
+      renonciation: !!(captureForm.renonciation && captureForm.renonciation.checked),
       customer: {
         prenom: captureForm.prenom.value.trim(),
         nom: captureForm.nom.value.trim(),
