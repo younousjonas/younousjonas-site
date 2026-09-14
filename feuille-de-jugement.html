@@ -1,169 +1,283 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Feuille de jugement — Défaire le retournement</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Mulish:wght@400;500;600;700&display=swap">
-<style>
-  :root{
-    --ground:#0d1416;--ground-2:#0a1012;--surface:#14201f;--field:#0f1a1a;
-    --line:#22403f;--line-soft:#1b3231;
-    --ink:#eef5f4;--ink-dim:#a7c0bd;--ink-faint:#7c9794;
-    --turq:#4ebdc4;--turq-bright:#6fd6dc;--gold:#c9a24b;--gold-soft:#e0c078;--err:#e88a7d;
-    color-scheme:dark;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:
-      radial-gradient(1100px 600px at 80% -10%, rgba(78,189,196,.10), transparent 60%),
-      radial-gradient(900px 500px at 5% 110%, rgba(201,162,75,.06), transparent 55%),
-      var(--ground);
-    color:var(--ink);font-family:"Mulish",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-    line-height:1.6;-webkit-font-smoothing:antialiased;}
-  .wrap{max-width:680px;margin:0 auto;padding-inline:20px;padding-block:44px 72px}
-  .eyebrow{font-size:.72rem;letter-spacing:.26em;text-transform:uppercase;color:var(--turq);font-weight:700;margin:0 0 14px}
-  h1{font-family:"Fraunces",Georgia,serif;font-weight:500;font-size:clamp(2rem,6vw,2.9rem);line-height:1.04;letter-spacing:-.01em;margin:0;text-wrap:balance}
-  .intro{margin:16px 0 0;color:var(--ink-dim);font-size:1.02rem}
-  .intro strong{color:var(--ink)}
-  .rule{height:1px;background:linear-gradient(90deg,var(--line),transparent);margin:32px 0}
-  form{display:flex;flex-direction:column;gap:30px}
-  fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:16px}
-  legend{font-family:"Fraunces",Georgia,serif;font-size:1.25rem;font-weight:500;color:var(--turq-bright);padding:0;margin:0 0 4px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .field{display:flex;flex-direction:column;gap:7px}
-  label{font-size:.92rem;font-weight:600;color:var(--ink)}
-  label .req{color:var(--turq);margin-left:3px}
-  .hint{font-size:.85rem;color:var(--ink-faint);margin:-2px 0 2px}
-  input,textarea{width:100%;background:var(--field);border:1px solid var(--line-soft);border-radius:10px;color:var(--ink);font-family:inherit;font-size:1rem;padding:12px 14px;line-height:1.55;transition:border-color .15s ease, box-shadow .15s ease}
-  input::placeholder,textarea::placeholder{color:#5f7a78}
-  textarea{resize:vertical;min-height:96px;overflow:hidden}
-  input:focus,textarea:focus{outline:none;border-color:var(--turq);box-shadow:0 0 0 3px rgba(78,189,196,.16)}
-  input:invalid.touched,textarea:invalid.touched{border-color:var(--err)}
-  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-  .q{background:linear-gradient(180deg,var(--surface),var(--ground-2));border:1px solid var(--line-soft);border-radius:14px;padding:20px 20px 22px;display:flex;flex-direction:column;gap:9px}
-  .q .num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(78,189,196,.14);color:var(--turq-bright);font-weight:700;font-size:.85rem;flex:none}
-  .q .qhead{display:flex;gap:11px;align-items:flex-start}
-  .q .qtitle{font-weight:700;font-size:1.02rem;color:var(--ink)}
-  .optnote{font-family:"Mulish",sans-serif;font-size:.78rem;font-weight:600;color:var(--ink-faint);letter-spacing:0;text-transform:none}
-  .radios{display:flex;gap:20px;flex-wrap:wrap;margin-top:2px}
-  .radio{display:inline-flex;align-items:center;gap:8px;font-weight:500;color:var(--ink-dim);cursor:pointer;font-size:.98rem}
-  .radio input{width:auto;padding:0;accent-color:var(--turq)}
-  .actions{display:flex;flex-direction:column;gap:14px;align-items:flex-start}
-  button{appearance:none;border:0;cursor:pointer;background:var(--turq);color:#04211f;font-family:inherit;font-weight:700;font-size:1.02rem;padding:15px 32px;border-radius:11px;transition:transform .15s ease, background .15s ease}
-  button:hover{transform:translateY(-2px);background:var(--turq-bright)}
-  button:disabled{opacity:.6;cursor:default;transform:none}
-  button:focus-visible{outline:2px solid var(--turq-bright);outline-offset:3px}
-  .consent{font-size:.86rem;color:var(--ink-faint);max-width:52ch}
-  .formerr{color:var(--err);font-size:.9rem;display:none}
-  .attrib{margin-top:34px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:.82rem;color:var(--ink-faint)}
-  .attrib a{color:var(--turq);text-decoration:underline;text-underline-offset:2px}
-  .done{display:none;text-align:center;padding:46px 20px}
-  .done h2{font-family:"Fraunces",Georgia,serif;font-weight:500;font-size:1.9rem;color:var(--turq-bright);margin:0 0 12px}
-  .done p{color:var(--ink-dim);max-width:40ch;margin:0 auto}
-  body.sent form{display:none}
-  body.sent .done{display:block}
-  @media (max-width:520px){ .grid2{grid-template-columns:1fr} .wrap{padding-block:32px 60px} }
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feuille de jugement — Défaire le retournement</title>
+  <!-- Page cachée : non indexée, absente du sitemap, non liée depuis la navigation.
+       Voir aussi robots.txt (Disallow: /feuille-de-jugement). -->
+  <meta name="robots" content="noindex, nofollow">
+  <!-- Chemins racine-relatifs : la page est servie à la fois sur /feuille-de-jugement
+       et /feuille-de-jugement.html ; les chemins relatifs seraient fragiles. -->
+  <link rel="stylesheet" href="/assets/style.css">
+  <script src="/assets/config.js"></script>
+  <script defer src="/assets/main.js"></script>
+  <style>
+    /* Styles propres à cette page, scopés sous .fdj-* : aucune modification
+       de assets/style.css, donc aucun effet sur le reste du site.
+       Palette et typo = charte du site (Inter, accent navy #2C3E6B). */
+    .fdj-head{padding:56px 0 8px}
+    .fdj-head h1{font-size:clamp(2.1rem,5vw,3.4rem)}
+    .fdj-wrap{padding:24px 0 76px}
+    .fdj-wrap .container{max-width:720px}
+    .fdj{gap:0}
+    .fdj fieldset{border:0;margin:0;padding:0;min-width:0} /* min-width:0 : évite le débordement mobile des fieldset */
+    .fdj legend{padding:0}
+    .fdj-part{padding:30px 0 4px;border-top:1px solid var(--line)}
+    .fdj-part:first-of-type{border-top:0;padding-top:4px}
+    .fdj-part-title{font-size:1.34rem;font-weight:750;letter-spacing:-.025em;margin:0 0 2px;color:var(--accent)}
+    .fdj-part-title .fdj-sous{font-size:.86rem;font-weight:600;color:var(--muted);letter-spacing:0}
+    .fdj-field{display:grid;gap:7px;margin:20px 0 0}
+    .fdj-field > label,.fdj-label{font-weight:700;font-size:.98rem;line-height:1.4;letter-spacing:-.01em}
+    .fdj-req{color:var(--accent);margin-left:2px}
+    .fdj-hint{font-size:.88rem;color:var(--muted);line-height:1.45;margin:-1px 0 1px;font-weight:400}
+    .fdj-duo{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+    .fdj-duo .fdj-field{margin-top:0}
+    /* Carte de question numérotée */
+    .fdj-q{background:var(--soft);border:1px solid var(--line);border-radius:20px;padding:20px;margin-top:16px;display:grid;gap:10px}
+    .fdj-q-tete{display:flex;gap:12px;align-items:flex-start}
+    .fdj-q-num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--accent);font-weight:800;font-size:.9rem;display:inline-flex;align-items:center;justify-content:center}
+    .fdj-q-titre{font-weight:700;font-size:1.02rem;line-height:1.4;letter-spacing:-.01em}
+    .fdj-q textarea{background:var(--card)}
+    /* Groupe de radios : le fieldset ne sert qu'à porter la legend (accessibilité),
+       il ne doit rien changer visuellement. */
+    .fdj-group{display:block}
+    .fdj-choix{display:flex;gap:22px;flex-wrap:wrap;margin-top:10px}
+    .fdj-choix label{display:inline-flex;align-items:center;gap:8px;font-size:.98rem;color:#3C3936;cursor:pointer}
+    .fdj-choix input{width:auto;flex-shrink:0;accent-color:var(--accent)} /* assets/style.css met width:100% sur input */
+    /* Champs auto-extensibles : la hauteur est pilotée en JS. */
+    .fdj textarea{min-height:96px;overflow:hidden}
+    .fdj input.touched:invalid,.fdj textarea.touched:invalid{border-color:#B4453A}
+    .fdj-actions{margin-top:30px;display:grid;gap:14px;justify-items:start}
+    .fdj-erreur{display:none;color:#B4453A;font-size:.92rem;margin:0}
+    .fdj-consent{font-size:.88rem;color:var(--muted);max-width:56ch;margin:0}
+    .fdj-attrib{font-size:.85rem;color:var(--muted);line-height:1.55;margin:30px 0 0;padding-top:20px;border-top:1px solid var(--line)}
+    .fdj-attrib a{color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px}
+    /* Écran de confirmation : remplace le formulaire une fois la feuille partie. */
+    .fdj-done{display:none;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:54px 24px;text-align:center;box-shadow:var(--shadow)}
+    .fdj-done h2{font-size:1.9rem;letter-spacing:-.03em;color:var(--accent);margin:0 0 12px}
+    .fdj-done p{color:var(--muted);max-width:44ch;margin:0 auto}
+    body.fdj-envoye .fdj{display:none}
+    body.fdj-envoye .fdj-done{display:block}
+    @media(max-width:520px){.fdj-duo{grid-template-columns:1fr}.fdj-q{padding:18px 16px}}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <p class="eyebrow">Défaire le retournement</p>
-  <h1>Feuille de jugement</h1>
-  <p class="intro">Cette feuille est le cœur du travail : on y écrit ce qu'on pense vraiment d'une personne, dans une situation précise — <strong>sans adoucir</strong>. Une pensée déjà à moitié corrigée ne se laisse pas examiner. Prenez la situation qui, quand elle revient, serre encore quelque chose dans le corps. Younous relit chaque feuille et vous répond par courriel. C'est compris dans le parcours.</p>
-  <div class="rule"></div>
 
-  <!-- Netlify Forms : name + method + data-netlify + honeypot -->
-  <form id="jyn" name="feuille-de-jugement" method="POST" data-netlify="true" netlify-honeypot="bot-field" novalidate>
-    <input type="hidden" name="form-name" value="feuille-de-jugement">
-    <p class="hp"><label>Ne pas remplir : <input name="bot-field"></label></p>
+<!-- Navigation réduite à la marque : la page est hors parcours de navigation. -->
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="/">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a></div></nav>
 
-    <fieldset>
-      <legend>Vous</legend>
-      <div class="grid2">
-        <div class="field"><label for="prenom">Prénom<span class="req">*</span></label><input id="prenom" name="prenom" type="text" autocomplete="given-name" required></div>
-        <div class="field"><label for="nom">Nom<span class="req">*</span></label><input id="nom" name="nom" type="text" autocomplete="family-name" required></div>
-        <div class="field"><label for="email">Email<span class="req">*</span></label><input id="email" name="email" type="email" autocomplete="email" placeholder="pour recevoir le retour de Younous" required></div>
-        <div class="field"><label for="whatsapp">WhatsApp</label><input id="whatsapp" name="whatsapp" type="tel" autocomplete="tel" placeholder="avec indicatif, ex. +262…"></div>
+<main>
+  <section class="fdj-head"><div class="container">
+    <div class="kicker">Défaire le retournement</div>
+    <h1>Feuille de jugement</h1>
+    <p class="lead">Cette feuille est le cœur du travail : on y écrit ce qu'on pense vraiment d'une personne, dans une situation précise — <strong>sans adoucir</strong>. Une pensée déjà à moitié corrigée ne se laisse pas examiner. Prenez la situation qui, quand elle revient, serre encore quelque chose dans le corps. Younous relit chaque feuille et vous répond par courriel. C'est compris dans le parcours.</p>
+  </div></section>
+
+  <section class="fdj-wrap"><div class="container">
+    <!-- Netlify Forms : détection au build sur le HTML statique livré.
+         Requis = name du <form>, data-netlify, champ caché form-name, honeypot bot-field. -->
+    <form class="form fdj" id="jyn" name="feuille-de-jugement" method="POST" data-netlify="true" data-netlify-honeypot="bot-field" novalidate>
+      <input type="hidden" name="form-name" value="feuille-de-jugement">
+      <p class="hp"><label>Ne pas remplir <input name="bot-field"></label></p>
+
+      <!-- ---------- Vous ---------- -->
+      <fieldset class="fdj-part">
+        <legend class="fdj-part-title">Vous</legend>
+
+        <div class="fdj-duo">
+          <div class="fdj-field"><label for="prenom">Prénom<span class="fdj-req">*</span></label>
+            <input id="prenom" name="prenom" type="text" autocomplete="given-name" required></div>
+          <div class="fdj-field"><label for="nom">Nom<span class="fdj-req">*</span></label>
+            <input id="nom" name="nom" type="text" autocomplete="family-name" required></div>
+        </div>
+
+        <div class="fdj-duo">
+          <div class="fdj-field"><label for="email">Email<span class="fdj-req">*</span></label>
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="pour recevoir le retour de Younous" required></div>
+          <div class="fdj-field"><label for="whatsapp">WhatsApp</label>
+            <input id="whatsapp" name="whatsapp" type="tel" autocomplete="tel" placeholder="avec indicatif, ex. +262…"></div>
+        </div>
+
+        <div class="fdj-field"><label for="date_passage">Date de passage<span class="fdj-req">*</span></label>
+          <p class="fdj-hint">Le jour où vous remplissez cette feuille.</p>
+          <input id="date_passage" name="date_passage" type="date" required></div>
+      </fieldset>
+
+      <!-- ---------- La situation ---------- -->
+      <fieldset class="fdj-part">
+        <legend class="fdj-part-title">La situation</legend>
+
+        <div class="fdj-field"><label for="situation">Une personne, un moment précis<span class="fdj-req">*</span></label>
+          <p class="fdj-hint">Pas un thème ni « en général ». Un instant : où vous étiez, ce qui a été dit. Écrivez au présent.</p>
+          <textarea id="situation" name="situation" required placeholder="« Il est vingt heures, nous sommes dans la cuisine, elle dit… »"></textarea></div>
+      </fieldset>
+
+      <!-- ---------- Six questions ---------- -->
+      <fieldset class="fdj-part">
+        <legend class="fdj-part-title">Six questions</legend>
+
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">1</span>
+          <label class="fdj-q-titre" for="q1">Dans cette situation, qui vous met en colère, vous contrarie, vous blesse ou vous déçoit — et pourquoi ?</label></div>
+          <textarea id="q1" name="q1" required placeholder="Je suis… (émotion) envers… (prénom) parce que…"></textarea></div>
+
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">2</span>
+          <label class="fdj-q-titre" for="q2">Dans cette situation, comment voulez-vous que cette personne change ? Que voulez-vous qu'elle fasse ?</label></div>
+          <textarea id="q2" name="q2" required placeholder="Je veux que… (prénom)…"></textarea></div>
+
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">3</span>
+          <label class="fdj-q-titre" for="q3">Dans cette situation, quel conseil lui donneriez-vous ?</label></div>
+          <textarea id="q3" name="q3" required placeholder="… (prénom) devrait / ne devrait pas…"></textarea></div>
+
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">4</span>
+          <label class="fdj-q-titre" for="q4">De quoi avez-vous besoin de sa part, dans cette situation, pour être en paix ?</label></div>
+          <textarea id="q4" name="q4" required placeholder="J'ai besoin que… (prénom)…"></textarea></div>
+
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">5</span>
+          <label class="fdj-q-titre" for="q5">Que pensez-vous de cette personne dans cette situation ? Dressez la liste, sans vous corriger.</label></div>
+          <textarea id="q5" name="q5" required placeholder="… (prénom) est…"></textarea></div>
+
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">6</span>
+          <label class="fdj-q-titre" for="q6">Qu'est-ce que, dans cette situation, vous ne voulez plus jamais revivre ?</label></div>
+          <textarea id="q6" name="q6" required placeholder="Je ne veux plus jamais…"></textarea></div>
+      </fieldset>
+
+      <!-- ---------- Le travail ---------- -->
+      <fieldset class="fdj-part">
+        <legend class="fdj-part-title">Le travail <span class="fdj-sous">— les quatre questions et les retournements</span></legend>
+
+        <div class="fdj-field"><label for="affirmation">L'affirmation que vous travaillez<span class="fdj-req">*</span></label>
+          <p class="fdj-hint">Reprenez une seule phrase de vos réponses ci-dessus — souvent la question 1. Ex. « … devrait m'écouter ».</p>
+          <textarea id="affirmation" name="tw_affirmation" required placeholder="La pensée à examiner, une seule."></textarea></div>
+
+        <!-- Groupes de radios en fieldset/legend : seul moyen d'associer la question
+             à ses deux réponses pour un lecteur d'écran (accessibilité AA). -->
+        <div class="fdj-q"><fieldset class="fdj-group">
+          <legend class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">1</span>
+            <span class="fdj-q-titre">Est-ce vrai ?<span class="fdj-req">*</span></span></legend>
+          <div class="fdj-choix">
+            <label><input type="radio" name="tw_q1" value="Oui" required> Oui</label>
+            <label><input type="radio" name="tw_q1" value="Non" required> Non</label>
+          </div></fieldset></div>
+
+        <div class="fdj-q"><fieldset class="fdj-group">
+          <legend class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">2</span>
+            <span class="fdj-q-titre">Pouvez-vous savoir avec certitude que c'est vrai ?<span class="fdj-req">*</span></span></legend>
+          <div class="fdj-choix">
+            <label><input type="radio" name="tw_q2" value="Oui" required> Oui</label>
+            <label><input type="radio" name="tw_q2" value="Non" required> Non</label>
+          </div></fieldset></div>
+
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">3</span>
+          <label class="fdj-q-titre" for="tw_q3">Comment réagissez-vous, que se passe-t-il, quand vous croyez cette pensée ?<span class="fdj-req">*</span></label></div>
+          <textarea id="tw_q3" name="tw_q3" required placeholder="Vos réactions, images, sensations, comportements…"></textarea></div>
+
+        <div class="fdj-q"><div class="fdj-q-tete"><span class="fdj-q-num" aria-hidden="true">4</span>
+          <label class="fdj-q-titre" for="tw_q4">Qui seriez-vous, dans cette situation, sans cette pensée ?<span class="fdj-req">*</span></label></div>
+          <textarea id="tw_q4" name="tw_q4" required placeholder="Sans la pensée, dans le même moment…"></textarea></div>
+
+        <div class="fdj-field"><label for="inv_soi">Retournement vers soi<span class="fdj-req">*</span></label>
+          <p class="fdj-hint">Ramenez l'affirmation à vous. Ex. « Je devrais m'écouter ». Trouvez un à trois exemples concrets et vrais.</p>
+          <textarea id="inv_soi" name="tw_inv_soi" required></textarea></div>
+
+        <div class="fdj-field"><label for="inv_autre">Retournement vers l'autre<span class="fdj-req">*</span></label>
+          <p class="fdj-hint">Ex. « Je devrais l'écouter ». Un à trois exemples.</p>
+          <textarea id="inv_autre" name="tw_inv_autre" required></textarea></div>
+
+        <div class="fdj-field"><label for="inv_oppose">Retournement à l'opposé (le contraire)<span class="fdj-req">*</span></label>
+          <p class="fdj-hint">Ex. « Elle ne devrait pas m'écouter ». Un à trois exemples.</p>
+          <textarea id="inv_oppose" name="tw_inv_oppose" required></textarea></div>
+      </fieldset>
+
+      <div class="fdj-actions">
+        <button class="btn" type="submit">Envoyer ma feuille</button>
+        <p class="fdj-erreur" id="fdj-erreur" role="alert">Un souci d'envoi. Réessayez, ou écrivez à <a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a>.</p>
+        <p class="fdj-consent">En envoyant, vous transmettez cette feuille à Younous Jonas pour un retour personnel par courriel, dans le cadre du parcours. Vos réponses restent confidentielles.</p>
       </div>
-      <div class="field">
-        <label for="date_passage">Date de passage<span class="req">*</span></label>
-        <div class="hint">Le jour où vous remplissez cette feuille.</div>
-        <input id="date_passage" name="date_passage" type="date" required>
-      </div>
-    </fieldset>
+    </form>
 
-    <fieldset>
-      <legend>La situation</legend>
-      <div class="field">
-        <label for="situation">Une personne, un moment précis<span class="req">*</span></label>
-        <div class="hint">Pas un thème ni « en général ». Un instant : où vous étiez, ce qui a été dit. Écrivez au présent.</div>
-        <textarea id="situation" name="situation" required placeholder="« Il est vingt heures, nous sommes dans la cuisine, elle dit… »"></textarea>
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>Six questions</legend>
-      <div class="q"><div class="qhead"><span class="num">1</span><span class="qtitle">Dans cette situation, qui vous met en colère, vous contrarie, vous blesse ou vous déçoit — et pourquoi ?</span></div><textarea name="q1" required placeholder="Je suis… (émotion) envers… (prénom) parce que…"></textarea></div>
-      <div class="q"><div class="qhead"><span class="num">2</span><span class="qtitle">Dans cette situation, comment voulez-vous que cette personne change ? Que voulez-vous qu'elle fasse ?</span></div><textarea name="q2" required placeholder="Je veux que… (prénom)…"></textarea></div>
-      <div class="q"><div class="qhead"><span class="num">3</span><span class="qtitle">Dans cette situation, quel conseil lui donneriez-vous ?</span></div><textarea name="q3" required placeholder="… (prénom) devrait / ne devrait pas…"></textarea></div>
-      <div class="q"><div class="qhead"><span class="num">4</span><span class="qtitle">De quoi avez-vous besoin de sa part, dans cette situation, pour être en paix ?</span></div><textarea name="q4" required placeholder="J'ai besoin que… (prénom)…"></textarea></div>
-      <div class="q"><div class="qhead"><span class="num">5</span><span class="qtitle">Que pensez-vous de cette personne dans cette situation ? Dressez la liste, sans vous corriger.</span></div><textarea name="q5" required placeholder="… (prénom) est…"></textarea></div>
-      <div class="q"><div class="qhead"><span class="num">6</span><span class="qtitle">Qu'est-ce que, dans cette situation, vous ne voulez plus jamais revivre ?</span></div><textarea name="q6" required placeholder="Je ne veux plus jamais…"></textarea></div>
-    </fieldset>
-
-    <fieldset>
-      <legend>Le travail <span class="optnote">— les quatre questions et les retournements</span></legend>
-      <div class="field">
-        <label for="affirmation">L'affirmation que vous travaillez<span class="req">*</span></label>
-        <div class="hint">Reprenez une seule phrase de vos réponses ci-dessus — souvent la question 1. Ex. « … devrait m'écouter ».</div>
-        <textarea id="affirmation" name="tw_affirmation" required placeholder="La pensée à examiner, une seule."></textarea>
-      </div>
-      <div class="q"><div class="qhead"><span class="num">1</span><span class="qtitle">Est-ce vrai ?<span class="req">*</span></span></div><div class="radios"><label class="radio"><input type="radio" name="tw_q1" value="Oui" required> Oui</label><label class="radio"><input type="radio" name="tw_q1" value="Non" required> Non</label></div></div>
-      <div class="q"><div class="qhead"><span class="num">2</span><span class="qtitle">Pouvez-vous savoir avec certitude que c'est vrai ?<span class="req">*</span></span></div><div class="radios"><label class="radio"><input type="radio" name="tw_q2" value="Oui" required> Oui</label><label class="radio"><input type="radio" name="tw_q2" value="Non" required> Non</label></div></div>
-      <div class="q"><div class="qhead"><span class="num">3</span><span class="qtitle">Comment réagissez-vous, que se passe-t-il, quand vous croyez cette pensée ?<span class="req">*</span></span></div><textarea name="tw_q3" required placeholder="Vos réactions, images, sensations, comportements…"></textarea></div>
-      <div class="q"><div class="qhead"><span class="num">4</span><span class="qtitle">Qui seriez-vous, dans cette situation, sans cette pensée ?<span class="req">*</span></span></div><textarea name="tw_q4" required placeholder="Sans la pensée, dans le même moment…"></textarea></div>
-      <div class="field"><label for="inv_soi">Retournement vers soi<span class="req">*</span></label><div class="hint">Ramenez l'affirmation à vous. Ex. « Je devrais m'écouter ». Trouvez un à trois exemples concrets et vrais.</div><textarea id="inv_soi" name="tw_inv_soi" required></textarea></div>
-      <div class="field"><label for="inv_autre">Retournement vers l'autre<span class="req">*</span></label><div class="hint">Ex. « Je devrais l'écouter ». Un à trois exemples.</div><textarea id="inv_autre" name="tw_inv_autre" required></textarea></div>
-      <div class="field"><label for="inv_oppose">Retournement à l'opposé (le contraire)<span class="req">*</span></label><div class="hint">Ex. « Elle ne devrait pas m'écouter ». Un à trois exemples.</div><textarea id="inv_oppose" name="tw_inv_oppose" required></textarea></div>
-    </fieldset>
-
-    <div class="actions">
-      <button type="submit">Envoyer ma feuille</button>
-      <p class="formerr" id="formerr">Un souci d'envoi. Réessayez, ou écrivez à hello@younousjonas.com.</p>
-      <p class="consent">En envoyant, vous transmettez cette feuille à Younous Jonas pour un retour personnel par courriel, dans le cadre du parcours. Vos réponses restent confidentielles.</p>
+    <div class="fdj-done" role="status" aria-live="polite">
+      <h2>C'est transmis.</h2>
+      <p>Votre feuille est bien partie. Younous la relit et vous répond par courriel. Gardez de côté la situation choisie : c'est elle qu'on travaillera.</p>
     </div>
-  </form>
 
-  <div class="done" role="status" aria-live="polite">
-    <h2>C'est transmis.</h2>
-    <p>Votre feuille est bien partie. Younous la relit et vous répond par courriel. Gardez de côté la situation choisie : c'est elle qu'on travaillera.</p>
-  </div>
+    <p class="fdj-attrib">D'après la feuille « Jugez votre prochain » (Judge-Your-Neighbor Worksheet), une œuvre de Byron Katie. La version officielle se télécharge librement sur <a href="https://thework.com" target="_blank" rel="noopener">thework.com</a>. Animé par Younous Jonas, formé au processus en 2008 — non certifié par Byron Katie International.</p>
+  </div></section>
+</main>
 
-  <p class="attrib">D'après la feuille « Jugez votre prochain » (Judge-Your-Neighbor Worksheet), une œuvre de Byron Katie. La version officielle se télécharge librement sur <a href="https://thework.com" target="_blank" rel="noopener">thework.com</a>. Animé par Younous Jonas, formé au processus en 2008 — non certifié par Byron Katie International.</p>
-</div>
+<footer class="footer"><div class="container footer-inner">
+  <div>&copy; Younous Jonas - Komsa Éditions</div>
+  <div><a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> &middot; <a href="/mentions-legales.html">Mentions légales</a> &middot; <a href="/confidentialite.html">Confidentialité</a></div>
+</div></footer>
 
 <script>
-  (function(){
-    var d = document.getElementById('date_passage');
-    if (d) { var t=new Date(); d.value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); }
-    function grow(el){ el.style.height='auto'; el.style.height=(el.scrollHeight+2)+'px'; }
-    document.querySelectorAll('textarea').forEach(function(ta){ grow(ta); ta.addEventListener('input',function(){grow(ta);}); });
-    var form=document.getElementById('jyn'), err=document.getElementById('formerr');
-    form.addEventListener('submit', function(e){
-      e.preventDefault(); err.style.display='none';
-      var ok=true;
-      form.querySelectorAll('[required]').forEach(function(el){ el.classList.add('touched'); if(!el.checkValidity()) ok=false; });
-      if(!ok){ var bad=form.querySelector(':invalid'); if(bad) bad.focus(); return; }
-      var btn=form.querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='Envoi…';
-      fetch('/', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams(new FormData(form)).toString()})
-        .then(function(r){ if(!r.ok) throw new Error('bad status'); document.body.classList.add('sent'); window.scrollTo({top:0,behavior:'smooth'}); })
-        .catch(function(){ btn.disabled=false; btn.textContent='Envoyer ma feuille'; err.style.display='block'; });
+(function () {
+  var form = document.getElementById('jyn');
+  if (!form) return;
+
+  /* assets/main.js se branche sur le sélecteur `form[data-netlify]` et enverrait
+     le formulaire en double. On retire l'attribut avant son exécution (ce script
+     inline tourne pendant l'analyse, main.js est en `defer`). Sans effet sur
+     Netlify : la détection du formulaire a lieu au déploiement, pas à l'exécution
+     — en ligne, Netlify a d'ailleurs déjà retiré cet attribut du HTML servi. */
+  form.removeAttribute('data-netlify');
+
+  /* Date du jour pré-remplie : la feuille se remplit le jour même. */
+  var date = document.getElementById('date_passage');
+  if (date && !date.value) {
+    var j = new Date();
+    date.value = j.getFullYear() + '-' + String(j.getMonth() + 1).padStart(2, '0') + '-' + String(j.getDate()).padStart(2, '0');
+  }
+
+  /* Champs qui grandissent avec le texte : on écrit long ici, et une barre de
+     défilement interne couperait la relecture. */
+  function grandir(el) { el.style.height = 'auto'; el.style.height = (el.scrollHeight + 2) + 'px'; }
+  form.querySelectorAll('textarea').forEach(function (ta) {
+    grandir(ta);
+    ta.addEventListener('input', function () { grandir(ta); });
+  });
+
+  var erreur = document.getElementById('fdj-erreur');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    erreur.style.display = 'none';
+
+    /* novalidate + validation manuelle : on marque les champs touchés pour
+       n'afficher le rouge qu'après une tentative d'envoi. */
+    var valide = true;
+    form.querySelectorAll('[required]').forEach(function (el) {
+      el.classList.add('touched');
+      if (!el.checkValidity()) valide = false;
     });
-  })();
+    if (!valide) {
+      /* On ne vise que des contrôles focusables : `:invalid` matche aussi les
+         <fieldset> qui contiennent un champ invalide, et le focus se perdrait. */
+      var premier = form.querySelector('input:invalid, textarea:invalid, select:invalid');
+      if (premier) premier.focus();
+      return;
+    }
+
+    var bouton = form.querySelector('button[type="submit"]');
+    bouton.disabled = true;
+    bouton.textContent = 'Envoi…';
+
+    fetch(location.pathname, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(new FormData(form)).toString()
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        document.body.classList.add('fdj-envoye');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      })
+      .catch(function () {
+        bouton.disabled = false;
+        bouton.textContent = 'Envoyer ma feuille';
+        erreur.style.display = 'block';
+      });
+  });
+})();
 </script>
-</body>
-</html>
+</body></html>
