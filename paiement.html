@@ -47,6 +47,7 @@
       <option value="sprint">Sprint — 2 mois (8 séances)</option>
       <option value="approfondi">Approfondi — 3 mois (12 séances)</option>
       <option value="mako">Mako — session de lancement</option>
+      <option value="diriger">Formation — Diriger sans tout porter</option>
     </select>
   </div>
   <span class="price" id="summary-price">—</span>
@@ -87,8 +88,16 @@
     unite:      { nom: "Séance à l’unité",            prix: "300 €" },
     sprint:     { nom: "Sprint — 2 mois (8 séances)", prix: "2 200 €" },
     approfondi: { nom: "Approfondi — 3 mois (12 séances)", prix: "3 000 €" },
-    mako:       { nom: "Mako — session de lancement", prix: "99 €" }
+    mako:       { nom: "Mako — session de lancement", prix: "99 €" },
+    diriger:    { nom: "Formation — Diriger sans tout porter", prix: prixDiriger() }
   };
+  // Même grille datée que le serveur (affichage seulement).
+  function prixDiriger() {
+    var now = Date.now();
+    if (now <= Date.parse("2026-10-07T23:59:59+04:00")) return "900 €";
+    if (now <= Date.parse("2026-10-31T23:59:59+04:00")) return "1 200 €";
+    return "1 500 €";
+  }
   var ENDPOINT = "/.netlify/functions/create-payment-intent";
 
   var $ = function (id) { return document.getElementById(id); };
@@ -136,6 +145,20 @@
     if (titre) titre.textContent = "Réserve ta place.";
     if (intro) intro.textContent = "Renseigne tes coordonnées, puis règle en ligne — sans quitter le site. Tu reçois un reçu par email aussitôt le paiement confirmé.";
     document.title = "Réserver ma place — Mako";
+  }
+
+  // Formation : formule verrouillée, habillage « Formation » (vouvoiement).
+  if (initial === "diriger") {
+    formuleSel.hidden = true;
+    var fixedF = document.createElement("span");
+    fixedF.className = "formule-fixed";
+    fixedF.textContent = FORMULES.diriger.nom;
+    formuleSel.parentNode.appendChild(fixedF);
+    var kickerF = document.querySelector(".checkout .kicker");
+    var titreF = document.querySelector(".checkout h1");
+    if (kickerF) kickerF.textContent = "Formation";
+    if (titreF) titreF.textContent = "Réserver votre place.";
+    document.title = "Réserver ma place — Diriger sans tout porter";
   }
 
   function refreshPrice() {
@@ -229,7 +252,7 @@
 
     stripe.confirmPayment({
       elements: elements,
-      confirmParams: { return_url: location.origin + (formuleSel.value === "mako" ? "/merci-mako.html" : "/merci-coaching.html") }
+      confirmParams: { return_url: location.origin + (formuleSel.value === "mako" ? "/merci-mako.html" : formuleSel.value === "diriger" ? "/merci-formation.html" : "/merci-coaching.html") }
     }).then(function (result) {
       // On n'arrive ici que si la confirmation échoue avant la redirection.
       if (result.error) {

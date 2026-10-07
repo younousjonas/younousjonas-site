@@ -50,7 +50,27 @@ const FORMULES = {
     product_id: "prod_UnFcAAWfDg0d0t",
     tag_palier_source: "N4_inscription",
   },
+  // Formation « Diriger sans tout porter » — montant fixé par la date
+  // (voir prixDiriger). price_id / product_id à renseigner si des objets
+  // Stripe dédiés sont créés ; le PaymentIntent n'en dépend pas.
+  diriger: {
+    montant_cents: 150000,
+    motif: "Formation — Diriger sans tout porter (5 séances)",
+    price_id: "",
+    product_id: "",
+    tag_palier_source: "N4_formation",
+  },
 };
+
+// Paliers datés de la formation (heure de La Réunion, UTC+4). Le serveur est
+// seul juge : un client ne peut pas obtenir un palier expiré.
+const DIRIGER_FLASH_FIN = Date.parse("2026-10-07T23:59:59+04:00"); // 900 €
+const DIRIGER_LANCEMENT_FIN = Date.parse("2026-10-31T23:59:59+04:00"); // 1 200 €
+function prixDiriger(now = Date.now()) {
+  if (now <= DIRIGER_FLASH_FIN) return { cents: 90000, palier: "offre_du_jour" };
+  if (now <= DIRIGER_LANCEMENT_FIN) return { cents: 120000, palier: "lancement" };
+  return { cents: 150000, palier: "normal" };
+}
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -82,9 +102,15 @@ exports.handler = async (event) => {
   }
 
   const formuleCle = String(payload.formule || "").trim();
-  const formule = FORMULES[formuleCle];
-  if (!formule) {
+  const base = FORMULES[formuleCle];
+  if (!base) {
     return json(400, { error: "Formule inconnue." });
+  }
+  const formule = { ...base };
+  if (formuleCle === "diriger") {
+    const p = prixDiriger();
+    formule.montant_cents = p.cents;
+    formule.palier_prix = p.palier;
   }
 
   const c = payload.customer || {};
@@ -121,6 +147,7 @@ exports.handler = async (event) => {
     formule: formuleCle,
     price_id: formule.price_id,
     product_id: formule.product_id,
+    palier_prix: formule.palier_prix || "",
     prenom,
     nom,
     email,

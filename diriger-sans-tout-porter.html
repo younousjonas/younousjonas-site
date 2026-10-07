@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diriger sans tout porter - Younous Jonas</title>
+  <meta name="description" content="Une formation individuelle en cinq séances pour obtenir des résultats à travers les autres sans tout faire soi-même : clarifier, confier, choisir, tenir les accords, décider.">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/config.js"></script>
+  <script defer src="assets/main.js"></script>
+  <style>
+    /* Page de vente de la formation — style local bâti sur les tokens et
+       classes existants (.kicker, .card, .tag, .btn, .notice). Aucune autre
+       page n'est affectée. */
+    .signs{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:0;padding:0;list-style:none}
+    .signs li{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px 18px;color:#3C3936}
+    .modules{display:grid;gap:0;margin:0;padding:0;list-style:none;counter-reset:mod}
+    .modules li{display:grid;grid-template-columns:72px 1fr;gap:6px 20px;padding:22px 0;border-bottom:1px solid var(--line);counter-increment:mod}
+    .modules li:first-child{padding-top:0}
+    .modules li::before{content:"S" counter(mod);grid-row:span 2;font-size:1.6rem;font-weight:800;letter-spacing:-.03em;color:var(--accent);line-height:1}
+    .modules h3{margin:0;font-size:1.18rem;letter-spacing:-.02em}
+    .modules p{margin:0;color:var(--muted)}
+    .format{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .format .card h3{font-size:1.05rem}
+    .offer{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:stretch}
+    .price-card{background:var(--card);border:1px solid var(--accent);border-radius:26px;padding:28px 26px;box-shadow:0 18px 50px rgba(44,62,107,.14);display:flex;flex-direction:column;gap:10px}
+    .price-card .label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--accent)}
+    .price-card .price{font-size:2.8rem;font-weight:800;letter-spacing:-.04em;line-height:1;margin:0}
+    .price-card .until{margin:0;font-weight:700}
+    .price-card .ladder{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-size:.95rem;color:var(--muted)}
+    .price-card .ladder li{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:6px}
+    .price-card .ladder li.on{color:var(--ink);font-weight:700}
+    .price-card .ladder li.off{text-decoration:line-through;opacity:.6}
+    .price-card .cta{margin-top:auto;width:100%}
+    .compare{overflow-x:auto}
+    .compare table{border-collapse:collapse;width:100%;min-width:560px;background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+    .compare th,.compare td{padding:14px 16px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+    .compare th{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+    .compare td:first-child{font-weight:700;width:22%}
+    .compare tr:last-child td{border-bottom:0}
+    @media(max-width:850px){.signs,.format,.offer{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="index.html">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="a-propos.html">À propos</a><a href="livres.html">Livres</a><a href="le-malokisme.html">Le Malokisme</a><a href="conferences.html">Conférences</a><a href="agenda.html">Agenda</a><a href="contact.html">Contact</a><a class="btn secondary" data-komsa href="https://www.komsa.re">Komsa.re</a></div><a class="btn mobile-toggle" href="contact.html">Contact</a></div></nav>
+
+<main>
+<section class="section" style="border-top:0"><div class="container">
+  <div class="kicker">Formation · Management et organisation</div>
+  <h1>Diriger sans tout porter.</h1>
+  <p class="lead">Une formation individuelle en cinq séances pour obtenir des résultats à travers les autres, sans tout faire vous-même. Pour celles et ceux qui mènent une entreprise, un projet ou une association.</p>
+  <div class="actions">
+    <a class="btn" href="#tarif">Voir le tarif</a>
+    <a class="btn secondary" href="#programme">Le programme</a>
+  </div>
+</div></section>
+
+<section class="section"><div class="container">
+  <h2 class="section-title">Vous vous reconnaissez peut-être.</h2>
+  <p class="section-intro">Diriger ne s'improvise pas. Quand les savoir-faire de base manquent, c'est souvent la personne la plus engagée qui finit par tout porter.</p>
+  <ul class="signs">
+    <li>Toutes les décisions passent par vous, même les plus petites.</li>
+    <li>Vous refaites vous-même ce que vous aviez confié.</li>
+    <li>Votre agenda se remplit des demandes des autres avant vos propres priorités.</li>
+    <li>Vous hésitez à recadrer quelqu'un, puis vous compensez.</li>
+    <li>Votre équipe attend vos consignes pour avancer.</li>
+    <li>Vous ne savez pas toujours si une personne est fiable avant de vous engager avec elle.</li>
+  </ul>
+</div></section>
+
+<section class="section" id="programme"><div class="container">
+  <h2 class="section-title">Le programme.</h2>
+  <p class="section-intro">Cinq séances, une par semaine. Chacune apporte une méthode, puis vous l'appliquez à une situation réelle de votre activité avant la séance suivante.</p>
+  <ol class="modules">
+    <li><h3>Clarifier ce que vous voulez obtenir</h3><p>Définir le résultat attendu, fixer les priorités, et formuler un but assez clair pour qu'il tienne face aux urgences des autres.</p></li>
+    <li><h3>Confier un travail</h3><p>Déléguer, confier à un prestataire, former : trois gestes différents, qu'on ne traite pas de la même façon. Et la consigne écrite d'une page, qui se dit en moins d'une minute.</p></li>
+    <li><h3>Choisir les bonnes personnes</h3><p>Définir le profil recherché, écrire un cahier des charges, repérer la fiabilité avant de s'engager, et tirer les leçons de ses choix passés.</p></li>
+    <li><h3>Tenir les accords et négocier</h3><p>Mettre par écrit ce qui est convenu, revenir au dernier accord quand il n'est pas tenu, et négocier sans rompre la relation.</p></li>
+    <li><h3>Décider et organiser</h3><p>Exiger un niveau de qualité, savoir dire non, répartir les rôles et les responsabilités pour qu'une équipe avance sans attendre vos consignes.</p></li>
+  </ol>
+</div></section>
+
+<section class="section"><div class="container">
+  <h2 class="section-title">Comment cela se passe.</h2>
+  <div class="format">
+    <div class="card"><h3>5 séances de 1 h 30</h3><p>Par téléphone, une par semaine, sur cinq semaines.</p></div>
+    <div class="card"><h3>Vos situations réelles</h3><p>Chaque méthode est appliquée à votre activité, pas à des cas d'école.</p></div>
+    <div class="card"><h3>Un exercice par semaine</h3><p>Entre les séances, vous mettez en pratique. La séance suivante commence par ce qui s'est passé.</p></div>
+  </div>
+</div></section>
+
+<section class="section" id="tarif"><div class="container">
+  <h2 class="section-title">Le tarif.</h2>
+  <div class="offer">
+    <div class="price-card">
+      <span class="label" id="offer-label">Tarif de lancement</span>
+      <p class="price" id="offer-price">1 200 €</p>
+      <p class="until" id="offer-until">Jusqu'au 31 octobre 2026 inclus.</p>
+      <ul class="ladder" aria-label="Paliers de prix">
+        <li id="tier-flash"><span>Offre du 7 octobre 2026, jusqu'à 23 h 59 (heure de La Réunion)</span><span>900 €</span></li>
+        <li id="tier-launch"><span>Tarif de lancement, jusqu'au 31 octobre 2026</span><span>1 200 €</span></li>
+        <li id="tier-normal"><span>Tarif à partir du 1er novembre 2026</span><span>1 500 €</span></li>
+      </ul>
+      <a class="btn cta" href="paiement.html?formule=diriger">Réserver ma place</a>
+      <p class="notice" style="margin:0">Paiement sécurisé en ligne. Un reçu vous est envoyé par email. Le premier rendez-vous est fixé ensemble après l'inscription.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Pour une structure</span>
+      <h3>Le conseil en organisation</h3>
+      <p>Pour une entreprise ou une association : un diagnostic de son fonctionnement, puis des recommandations écrites sur les rôles, l'organigramme et les règles communes. Les décisions restent à ceux qui dirigent.</p>
+      <p><strong>Sur devis</strong>, après un échange de cadrage.</p>
+      <a class="small-link" href="contact.html">Demander un échange →</a>
+    </div>
+  </div>
+</div></section>
+
+<section class="section"><div class="container">
+  <h2 class="section-title">Formation, coaching, conseil.</h2>
+  <p class="section-intro">Trois services différents. Cette page présente la formation et le conseil.</p>
+  <div class="compare">
+    <table>
+      <thead><tr><th></th><th>Formation</th><th>Coaching</th><th>Conseil</th></tr></thead>
+      <tbody>
+        <tr><td>Le but</td><td>Apprendre des méthodes et s'y exercer</td><td>Développer votre propre aptitude à décider, agir et corriger</td><td>Analyser une organisation et recommander</td></tr>
+        <tr><td>Qui apporte le contenu</td><td>Le formateur</td><td>Vous</td><td>Le consultant, après diagnostic</td></tr>
+        <tr><td>Pour qui</td><td>Une personne</td><td>Une personne</td><td>Une structure</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="notice" style="margin-top:18px">Vous cherchez un accompagnement individuel ? Voir le <a href="coaching.html" style="color:var(--accent);font-weight:700">coaching</a>.</p>
+</div></section>
+</main>
+
+<footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a data-lemalokisme href="https://lemalokisme.com">LeMalokisme.com</a> · <a data-komsa href="https://www.komsa.re">Komsa.re</a> · <a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> · <a href="mentions-legales.html">Mentions légales</a> · <a href="confidentialite.html">Confidentialité</a></div></div></footer>
+
+<script>
+(function () {
+  // Affichage du palier en cours. L'autorité sur le montant reste le serveur
+  // (create-payment-intent), qui applique les mêmes dates.
+  var FLASH_END = Date.parse("2026-10-07T23:59:59+04:00");
+  var LAUNCH_END = Date.parse("2026-10-31T23:59:59+04:00");
+  var now = Date.now();
+  var $ = function (id) { return document.getElementById(id); };
+  var flash = $("tier-flash"), launch = $("tier-launch"), normal = $("tier-normal");
+  if (now <= FLASH_END) {
+    $("offer-label").textContent = "Offre du jour";
+    $("offer-price").textContent = "900 €";
+    $("offer-until").textContent = "Aujourd'hui jusqu'à 23 h 59 (heure de La Réunion), soit 21 h 59 à Paris.";
+    flash.className = "on";
+  } else if (now <= LAUNCH_END) {
+    flash.className = "off";
+    launch.className = "on";
+  } else {
+    $("offer-label").textContent = "Tarif";
+    $("offer-price").textContent = "1 500 €";
+    $("offer-until").textContent = "Cinq séances de 1 h 30.";
+    flash.hidden = true;
+    launch.hidden = true;
+    normal.className = "on";
+  }
+})();
+</script>
+</body></html>
