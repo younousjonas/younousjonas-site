@@ -37,12 +37,6 @@ const FORMULES = {
     price_id: "price_1TmOCLCUcXJfZOaAAC5HBkgj",
     product_id: "prod_Ulw4FMA9qk0wt8",
   },
-  approfondi: {
-    montant_cents: 300000,
-    motif: "Coaching — Approfondi 3 mois (12 séances)",
-    price_id: "price_1TmOkXCUcXJfZOaAIeckLZ4u",
-    product_id: "prod_UlwdyCgPm3FNBF",
-  },
   // Mentorat : paiement unique du tarif total. Les identifiants de catalogue
   // Stripe sont facultatifs pour ce flux PaymentIntent.
   mentorat3: {
@@ -56,13 +50,6 @@ const FORMULES = {
     motif: "Mentorat — 4 mois (16 appels téléphoniques et suivi WhatsApp)",
     price_id: "",
     product_id: "",
-  },
-  mako: {
-    montant_cents: 9900,
-    motif: "Mako — session de lancement",
-    price_id: "price_1Tnf79CUcXJfZOaAVLWOaU07",
-    product_id: "prod_UnFcAAWfDg0d0t",
-    tag_palier_source: "N4_inscription",
   },
   // Formation « Diriger sans tout porter » — montant fixé par la date
   // (voir prixDiriger). price_id / product_id à renseigner si des objets

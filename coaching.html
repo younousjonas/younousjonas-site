@@ -12,7 +12,7 @@
     /* Cartes de tarif — archétype propre à cette page, bâti sur les tokens et
        les classes existantes (.tag, .btn, .container). Aucune autre page n’est
        affectée (style local). */
-    .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:8px}
+    .pricing{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:8px}
     .plan{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:26px 24px;box-shadow:0 10px 30px rgba(0,0,0,.04)}
     .plan.featured{border-color:var(--accent);box-shadow:0 18px 50px rgba(44,62,107,.14)}
     .plan .tag{align-self:flex-start;margin-bottom:14px}
@@ -96,15 +96,6 @@
     <p class="promise">Quand un moment vous met sous pression — une transition, un conflit, une décision qui pèse — et que la réaction prend le pas sur l’action. Huit séances, une par semaine : une cadence pour sortir vite du mode réaction et reprendre la main, depuis la cause.</p>
     <div class="when"><span class="label">Pour quand</span><p>Pour repasser à l’initiative quand l’enjeu est là, maintenant.</p></div>
     <a class="btn cta" href="paiement.html?formule=sprint">Choisir cette formule</a>
-  </article>
-
-  <article class="plan">
-    <h3>Approfondi — 3 mois</h3>
-    <p class="price">3 000 €</p>
-    <p class="meta">12 séances hebdomadaires · fenêtre de 3 mois</p>
-    <p class="promise">Un travail de fond. On reprend, domaine par domaine, ce qui vous fait subir au lieu d’agir — puis on ouvre la direction : ce que vous voulez vraiment, et le chemin pour y aller. Douze séances sur trois mois pour un changement qui s’installe en profondeur, parce qu’il a été vu, pas forcé.</p>
-    <div class="when"><span class="label">Pour quand</span><p>Pour un changement de fond, posé dans la durée.</p></div>
-    <a class="btn secondary cta" href="paiement.html?formule=approfondi">Choisir cette formule</a>
   </article>
 
 </div>

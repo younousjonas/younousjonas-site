@@ -6,3 +6,8 @@
 # Sources des fonctions : servies comme fichiers statiques (publish = racine) alors que
 # l'invocation passe par /.netlify/functions/* — on bloque la lecture du code.
 /netlify/functions/* /404 404!
+
+# Offre Mako retiree : les anciens liens renvoient aux accompagnements actuels.
+/mako /coaching 301!
+/mako/ /coaching 301!
+/mako.html /coaching 301!

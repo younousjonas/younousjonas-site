@@ -45,10 +45,8 @@
     <select id="formule" aria-label="Choisir la formule">
       <option value="unite">Séance à l’unité</option>
       <option value="sprint">Sprint — 2 mois (8 séances)</option>
-      <option value="approfondi">Approfondi — 3 mois (12 séances)</option>
       <option value="mentorat3">Mentorat — 3 mois (12 appels)</option>
       <option value="mentorat4">Mentorat — 4 mois (16 appels)</option>
-      <option value="mako">Mako — session de lancement</option>
       <option value="diriger">Formation — Diriger sans tout porter</option>
     </select>
   </div>
@@ -90,10 +88,8 @@
   var FORMULES = {
     unite:      { nom: "Séance à l’unité",            prix: "300 €" },
     sprint:     { nom: "Sprint — 2 mois (8 séances)", prix: "2 200 €" },
-    approfondi: { nom: "Approfondi — 3 mois (12 séances)", prix: "3 000 €" },
     mentorat3:  { nom: "Mentorat — 3 mois (12 appels)", prix: "3 000 €", appels: 12 },
     mentorat4:  { nom: "Mentorat — 4 mois (16 appels)", prix: "3 600 €", appels: 16 },
-    mako:       { nom: "Mako — session de lancement", prix: "99 €" },
     diriger:    { nom: "Formation — Diriger sans tout porter", prix: prixDiriger() }
   };
   // Même grille datée que le serveur (affichage seulement).
@@ -129,28 +125,21 @@
   // Pré-sélection depuis ?formule=… (défaut : sprint).
   var params = new URLSearchParams(location.search);
   var initial = params.get("formule");
+  if (initial === "approfondi" || initial === "mako") {
+    document.querySelector(".checkout h1").textContent = "Cette offre n’est plus proposée.";
+    document.querySelector(".checkout .section-intro").textContent = "Découvrez les formules de coaching et de mentorat actuellement disponibles.";
+    document.querySelector(".summary").hidden = true;
+    captureForm.hidden = true;
+    var offresLink = document.createElement("a");
+    offresLink.className = "btn";
+    offresLink.href = "/coaching";
+    offresLink.textContent = "Voir les accompagnements";
+    captureForm.parentNode.appendChild(offresLink);
+    document.title = "Offre terminée - Younous Jonas";
+    return;
+  }
   if (!FORMULES[initial]) initial = "sprint";
   formuleSel.value = initial;
-
-  // Mako ≠ coaching individuel : c'est un parcours de groupe (tutoiement).
-  // Quand ?formule=mako, on verrouille la formule (l'acheteur ne doit pas
-  // basculer sur du coaching) ET on adapte l'habillage de la page (kicker,
-  // titre, intro, onglet) pour ne pas afficher « Coaching individuel ».
-  if (initial === "mako") {
-    formuleSel.hidden = true;
-    var fixedLabel = document.createElement("span");
-    fixedLabel.className = "formule-fixed";
-    fixedLabel.textContent = FORMULES.mako.nom;
-    formuleSel.parentNode.appendChild(fixedLabel);
-
-    var kicker = document.querySelector(".checkout .kicker");
-    var titre = document.querySelector(".checkout h1");
-    var intro = document.querySelector(".checkout .section-intro");
-    if (kicker) kicker.textContent = "Mako — parcours";
-    if (titre) titre.textContent = "Réserve ta place.";
-    if (intro) intro.textContent = "Renseigne tes coordonnées, puis règle en ligne — sans quitter le site. Tu reçois un reçu par email aussitôt le paiement confirmé.";
-    document.title = "Réserver ma place — Mako";
-  }
 
   // Formation : formule verrouillée, habillage « Formation » (vouvoiement).
   if (initial === "diriger") {
@@ -174,7 +163,7 @@
     var details = $("mentorat-details");
     details.hidden = !mentorat;
     details.textContent = mentorat ? f.appels + " appels téléphoniques au total : 4 appels par mois, à un rythme hebdomadaire, avec suivi WhatsApp entre les appels. Le montant affiché est le tarif total du mentorat." : "";
-    if (initial !== "mako" && initial !== "diriger") {
+    if (initial !== "diriger") {
       document.querySelector(".checkout .kicker").textContent = mentorat ? "Mentorat individuel" : "Coaching individuel";
       document.querySelector(".checkout h1").textContent = mentorat ? "Réserver votre mentorat." : "Réserver votre accompagnement.";
       document.title = mentorat ? "Réserver votre mentorat - Younous Jonas" : "Réserver votre accompagnement - Younous Jonas";
@@ -266,7 +255,7 @@
 
     stripe.confirmPayment({
       elements: elements,
-      confirmParams: { return_url: location.origin + (formuleSel.value === "mako" ? "/merci-mako.html" : formuleSel.value === "diriger" ? "/merci-formation.html" : "/merci-coaching.html") + "?formule=" + encodeURIComponent(formuleSel.value) }
+      confirmParams: { return_url: location.origin + (formuleSel.value === "diriger" ? "/merci-formation.html" : "/merci-coaching.html") + "?formule=" + encodeURIComponent(formuleSel.value) }
     }).then(function (result) {
       // On n'arrive ici que si la confirmation échoue avant la redirection.
       if (result.error) {
