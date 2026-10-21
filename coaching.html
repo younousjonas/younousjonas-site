@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Coaching individuel - Younous Jonas</title>
-  <meta name="description" content="Un accompagnement individuel avec Younous Jonas pour sortir du mode réaction. Trois formules : séance à l’unité, Sprint 2 mois, Approfondi 3 mois.">
+  <title>Coaching et mentorat individuel - Younous Jonas</title>
+  <meta name="description" content="Coaching et mentorat avec Younous Jonas. Mentorat de 3 mois à 3 000 € ou de 4 mois à 3 600 € : 4 appels par mois et suivi WhatsApp.">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/config.js"></script>
   <script defer src="assets/main.js"></script>
@@ -26,16 +26,56 @@
     /* Pousse le bouton en bas : les CTA s’alignent d’une carte à l’autre malgré
        des promesses de longueurs différentes. */
     .plan .cta{margin-top:auto;width:100%}
-    @media(max-width:850px){.pricing{grid-template-columns:1fr}}
+    .pricing.mentorat-pricing{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .offer-section{scroll-margin-top:96px;margin-top:56px}
+    .offer-section h2{font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.08;letter-spacing:-.04em;margin:0 0 18px}
+    .offer-section .section-intro{margin-top:0}
+    .offer-nav{margin:24px 0 0}
+    .mentorat-note{max-width:790px;margin-top:24px}
+    @media(max-width:850px){.pricing,.pricing.mentorat-pricing{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 <nav class="nav"><div class="container nav-inner"><a class="brand" href="index.html">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="a-propos.html">À propos</a><a href="livres.html">Livres</a><a href="le-malokisme.html">Le Malokisme</a><a href="conferences.html">Conférences</a><a href="agenda.html">Agenda</a><a href="contact.html">Contact</a><a class="btn secondary" data-komsa href="https://www.komsa.re">Komsa.re</a></div><a class="btn mobile-toggle" href="contact.html">Contact</a></div></nav>
 
 <main><section class="section"><div class="container">
-<div class="kicker">Coaching individuel</div>
+<div class="kicker">Coaching et mentorat individuel</div>
 <h1>Un accompagnement pour sortir du mode réaction.</h1>
-<p class="section-intro">Un coaching individuel avec Younous Jonas. Nous repérons ensemble ce qui vous fait réagir au lieu d’agir — ce qui se rejoue à votre insu et vous garde à l’effet. Une fois vu, cela se desserre : vous repassez à la cause et vous reprenez parole, création et direction.</p>
+<p class="section-intro">Un accompagnement individuel avec Younous Jonas. Nous repérons ensemble ce qui vous fait réagir au lieu d’agir — ce qui se rejoue à votre insu et vous garde à l’effet. Une fois vu, cela se desserre : vous repassez à la cause et vous reprenez parole, création et direction.</p>
+<div class="actions offer-nav"><a class="btn" href="#mentorat">Découvrir le mentorat</a><a class="btn secondary" href="#coaching">Voir les formules de coaching</a></div>
+
+<section class="offer-section" id="mentorat" aria-labelledby="mentorat-title">
+<div class="kicker">Un rendez-vous chaque semaine. Un fil entre les appels.</div>
+<h2 id="mentorat-title">Mentorat individuel</h2>
+<p class="section-intro">Un travail suivi, à partir des situations vécues. Le mentorat permet de reconnaître les freins et les habitudes de pensée qui limitent l’action, de clarifier une direction, puis de mettre les prises de conscience à l’épreuve du quotidien. Chaque appel reprend ce qui a changé, ce qui résiste encore et le prochain pas à poser.</p>
+<p class="section-intro">Pour les coachs et les professionnels de l’accompagnement, ce travail peut aussi porter sur la posture, les biais qui orientent le regard et ce qui se joue dans la relation avec les personnes accompagnées. L’expérience du coaching et le regard sociologique se rencontrent pour éclairer la pratique.</p>
+
+<div class="pricing mentorat-pricing">
+  <article class="plan">
+    <span class="tag">3 mois</span>
+    <h3>Clarifier et mettre en pratique</h3>
+    <p class="price">3 000 €</p>
+    <p class="meta">Tarif total · 12 appels téléphoniques</p>
+    <p class="promise">Trois mois pour travailler sur les enjeux actuels, repérer les freins récurrents et faire évoluer concrètement la manière d’agir.</p>
+    <div class="when"><span class="label">Le rythme</span><p>4 appels par mois, à un rythme hebdomadaire, et un suivi par WhatsApp entre les appels.</p></div>
+    <a class="btn secondary cta" href="paiement.html?formule=mentorat3">Choisir le mentorat de 3 mois</a>
+  </article>
+  <article class="plan featured">
+    <span class="tag">4 mois</span>
+    <h3>Approfondir et consolider</h3>
+    <p class="price">3 600 €</p>
+    <p class="meta">Tarif total · 16 appels téléphoniques</p>
+    <p class="promise">Un mois supplémentaire pour approfondir les situations rencontrées, ajuster la pratique et consolider les changements dans la durée.</p>
+    <div class="when"><span class="label">Le rythme</span><p>4 appels par mois, à un rythme hebdomadaire, et un suivi par WhatsApp entre les appels.</p></div>
+    <a class="btn cta" href="paiement.html?formule=mentorat4">Choisir le mentorat de 4 mois</a>
+  </article>
+</div>
+<p class="notice mentorat-note">Les rendez-vous sont fixés ensemble, sur la base de quatre appels par mois. Le suivi WhatsApp permet de partager une situation, poser une question et prolonger le travail entre deux appels.</p>
+<div class="actions"><a class="btn secondary" href="mailto:hello@younousjonas.com?subject=Premier%20%C3%A9change%20%E2%80%94%20mentorat">Échanger avant de choisir</a></div>
+</section>
+
+<section class="offer-section" id="coaching" aria-labelledby="coaching-title">
+<h2 id="coaching-title">Les formules de coaching</h2>
 
 <div class="pricing">
 
@@ -70,6 +110,7 @@
 </div>
 
 <p class="notice" style="margin-top:28px;max-width:790px">Entre les séances, un fil WhatsApp reste ouvert pour vos questions. Chaque séance dure 1 h à 1 h 30, en présentiel ou en visio. Coaching individuel (particulier) — un reçu vous est envoyé automatiquement après paiement.</p>
+</section>
 
 </div></section></main>
 <footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a data-lemalokisme href="https://lemalokisme.com">LeMalokisme.com</a> · <a data-komsa href="https://www.komsa.re">Komsa.re</a> · <a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> · <a href="mentions-legales.html">Mentions légales</a> · <a href="confidentialite.html">Confidentialité</a></div></div></footer></body></html>

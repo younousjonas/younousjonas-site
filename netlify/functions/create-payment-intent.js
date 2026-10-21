@@ -43,6 +43,20 @@ const FORMULES = {
     price_id: "price_1TmOkXCUcXJfZOaAIeckLZ4u",
     product_id: "prod_UlwdyCgPm3FNBF",
   },
+  // Mentorat : paiement unique du tarif total. Les identifiants de catalogue
+  // Stripe sont facultatifs pour ce flux PaymentIntent.
+  mentorat3: {
+    montant_cents: 300000,
+    motif: "Mentorat — 3 mois (12 appels téléphoniques et suivi WhatsApp)",
+    price_id: "",
+    product_id: "",
+  },
+  mentorat4: {
+    montant_cents: 360000,
+    motif: "Mentorat — 4 mois (16 appels téléphoniques et suivi WhatsApp)",
+    price_id: "",
+    product_id: "",
+  },
   mako: {
     montant_cents: 9900,
     motif: "Mako — session de lancement",

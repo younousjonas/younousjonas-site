@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Merci - Younous Jonas</title>
-  <meta name="description" content="Confirmation de votre inscription au coaching individuel avec Younous Jonas.">
+  <meta name="description" content="Confirmation de votre inscription au coaching ou au mentorat individuel avec Younous Jonas.">
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/config.js"></script>
@@ -37,6 +37,11 @@
   var titre = document.getElementById("titre");
   var message = document.getElementById("message");
   var ref = document.getElementById("ref");
+  var formule = params.get("formule");
+  if (formule === "mentorat3" || formule === "mentorat4") {
+    document.querySelector(".confirm .kicker").textContent = "Mentorat individuel";
+    document.title = "Merci — Mentorat avec Younous Jonas";
+  }
 
   var vues = {
     succeeded: {

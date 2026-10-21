@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Réserver votre accompagnement - Younous Jonas</title>
-  <meta name="description" content="Réserver une formule de coaching individuel avec Younous Jonas. Paiement sécurisé, sans quitter le site.">
+  <meta name="description" content="Réserver une formule de coaching ou de mentorat individuel avec Younous Jonas. Paiement sécurisé, sans quitter le site.">
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/config.js"></script>
@@ -46,12 +46,15 @@
       <option value="unite">Séance à l’unité</option>
       <option value="sprint">Sprint — 2 mois (8 séances)</option>
       <option value="approfondi">Approfondi — 3 mois (12 séances)</option>
+      <option value="mentorat3">Mentorat — 3 mois (12 appels)</option>
+      <option value="mentorat4">Mentorat — 4 mois (16 appels)</option>
       <option value="mako">Mako — session de lancement</option>
       <option value="diriger">Formation — Diriger sans tout porter</option>
     </select>
   </div>
   <span class="price" id="summary-price">—</span>
 </div>
+<p class="notice" id="mentorat-details" hidden></p>
 
 <!-- Étape 1 — capture des coordonnées (B2C : pas de SIRET) -->
 <form class="form" id="capture-form" novalidate>
@@ -88,6 +91,8 @@
     unite:      { nom: "Séance à l’unité",            prix: "300 €" },
     sprint:     { nom: "Sprint — 2 mois (8 séances)", prix: "2 200 €" },
     approfondi: { nom: "Approfondi — 3 mois (12 séances)", prix: "3 000 €" },
+    mentorat3:  { nom: "Mentorat — 3 mois (12 appels)", prix: "3 000 €", appels: 12 },
+    mentorat4:  { nom: "Mentorat — 4 mois (16 appels)", prix: "3 600 €", appels: 16 },
     mako:       { nom: "Mako — session de lancement", prix: "99 €" },
     diriger:    { nom: "Formation — Diriger sans tout porter", prix: prixDiriger() }
   };
@@ -165,6 +170,15 @@
     var f = FORMULES[formuleSel.value];
     summaryPrice.textContent = f ? f.prix : "—";
     payAmount.textContent = f ? f.prix : "";
+    var mentorat = formuleSel.value === "mentorat3" || formuleSel.value === "mentorat4";
+    var details = $("mentorat-details");
+    details.hidden = !mentorat;
+    details.textContent = mentorat ? f.appels + " appels téléphoniques au total : 4 appels par mois, à un rythme hebdomadaire, avec suivi WhatsApp entre les appels. Le montant affiché est le tarif total du mentorat." : "";
+    if (initial !== "mako" && initial !== "diriger") {
+      document.querySelector(".checkout .kicker").textContent = mentorat ? "Mentorat individuel" : "Coaching individuel";
+      document.querySelector(".checkout h1").textContent = mentorat ? "Réserver votre mentorat." : "Réserver votre accompagnement.";
+      document.title = mentorat ? "Réserver votre mentorat - Younous Jonas" : "Réserver votre accompagnement - Younous Jonas";
+    }
   }
   refreshPrice();
   formuleSel.addEventListener("change", refreshPrice);
@@ -252,7 +266,7 @@
 
     stripe.confirmPayment({
       elements: elements,
-      confirmParams: { return_url: location.origin + (formuleSel.value === "mako" ? "/merci-mako.html" : formuleSel.value === "diriger" ? "/merci-formation.html" : "/merci-coaching.html") }
+      confirmParams: { return_url: location.origin + (formuleSel.value === "mako" ? "/merci-mako.html" : formuleSel.value === "diriger" ? "/merci-formation.html" : "/merci-coaching.html") + "?formule=" + encodeURIComponent(formuleSel.value) }
     }).then(function (result) {
       // On n'arrive ici que si la confirmation échoue avant la redirection.
       if (result.error) {
