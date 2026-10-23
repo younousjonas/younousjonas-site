@@ -91,7 +91,7 @@ curl -s … -d '{"action":"relancer-envoi","id":"MSG-…"}'
 
 ## Anciens formulaires Netlify (`biographies-parcours-297`, `biographies-histoire-891`)
 
-- Leurs pages et leur moteur sont retirés ; leurs adresses redirigent vers la demande courte.
+- Leurs pages et leur moteur sont retirés ; leurs adresses redirigent vers l'achat direct de l'offre correspondante.
 - La garde Edge `netlify/edge-functions/bd-formulaires-fermes.js` répond **410** à tout POST qui les vise, sur toutes les routes, en urlencoded comme en multipart. Elle lit toutes les valeurs `form-name` (`formData().getAll`), doublons compris, sans tenir compte de la casse ni des espaces ; un corps illisible qui contient un ancien nom est refusé. Les autres formulaires passent par `context.next()`.
 - Les soumissions déjà reçues restent dans Netlify : rien n'est supprimé. Ne pas utiliser « Delete form ».
 
@@ -103,6 +103,6 @@ curl -s … -d '{"action":"relancer-envoi","id":"MSG-…"}'
 
 ## Tests
 
-- `node --test tests/bd.test.mjs` : 41 tests serveur, dont achat direct (prix serveur, fermé sans capture, double clic, clé réutilisée, limites), concurrence (magasin à latence) et pannes injectées (entre « payée » et la mise en file, sur le marqueur d'événement, à la création de commande), deux traitements de file simultanés, envoi ambigu, verrou interrompu.
+- `npm test` : 45 tests du parcours et 7 tests de garde du stockage. Achat direct (prix serveur, fermé sans capture, double clic, clé réutilisée, limites), concurrence et pannes injectées, reprises de la file, coordonnées corrigées avant paiement, retour après échec ou expiration. L'adaptateur refuse les ETag absents, les conditions d'écriture invalides et les succès de stockage non confirmés.
 - `CHROMIUM_PATH=… PLAYWRIGHT_GLOBAL=$(npm root -g) node tests/e2e/e2e.mjs <dossier des captures, hors du dépôt>` : 66 vérifications navigateur (offres, achat fermé et ouvert, double clic, aucun questionnaire avant paiement, retour, espace, récupération), sur un serveur local avec les vraies fonctions, Stripe simulé, sans réseau.
 - Un vrai test Stripe est **bloqué** tant que les clés de test `BD_*` n'existent pas.

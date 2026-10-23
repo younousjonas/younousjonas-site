@@ -47,18 +47,34 @@ export function magasinMemoire({ latence = 0, panne = null } = {}){
 
 // Adaptateur d'un magasin Netlify Blobs (exporté pour les tests).
 export function adapter(s){
+  const etagValide = (etag) => typeof etag === 'string' && etag.trim().length > 0;
   const ecrire = async (k, v, options) => {
     // set() avec une chaîne : les conditions sont transmises telles quelles (setJSON en 10.x a été
     // signalé comme ne les transmettant pas).
     const r = await s.set(k, JSON.stringify(v), options);
     if(!r || typeof r.modified !== 'boolean') throw new Error('ecriture_conditionnelle_non_supportee');
+    // Certaines versions du SDK annoncent modified:true avec un ETag vide sur un échec HTTP.
+    // Sans ETag de succès, l'écriture n'est pas confirmée : on échoue au lieu d'avancer le traitement.
+    // Source : https://github.com/netlify/primitives/issues/741
+    if(r.modified && !etagValide(r.etag)) throw new Error('ecriture_conditionnelle_non_confirmee');
     return { ok: r.modified, etag: r.etag };
   };
   return {
     async getJSON(k){ return (await s.get(k, { type: 'json' })) ?? null; },
-    async getJSONv(k){ const r = await s.getWithMetadata(k, { type: 'json' }); return r ? { valeur: r.data, etag: r.etag } : null; },
+    async getJSONv(k){
+      const r = await s.getWithMetadata(k, { type: 'json' });
+      if(r === null) return null;
+      if(!r || !etagValide(r.etag)) throw new Error('etag_lecture_absent');
+      return { valeur: r.data, etag: r.etag };
+    },
     async setJSON(k, v){ await s.set(k, JSON.stringify(v)); },
-    async setJSONsi(k, v, cond){ return ecrire(k, v, cond && cond.nouveau ? { onlyIfNew: true } : { onlyIfMatch: cond.etag }); },
+    async setJSONsi(k, v, cond){
+      const creation = cond && Object.hasOwn(cond, 'nouveau') && cond.nouveau === true && !Object.hasOwn(cond, 'etag');
+      const modification = cond && !Object.hasOwn(cond, 'nouveau') && Object.hasOwn(cond, 'etag') && etagValide(cond.etag);
+      // onlyIfMatch vide est ignoré par le SDK : ne jamais le laisser devenir une écriture sans condition.
+      if(!creation && !modification) throw new Error('condition_ecriture_invalide');
+      return ecrire(k, v, creation ? { onlyIfNew: true } : { onlyIfMatch: cond.etag });
+    },
     async delete(k){ await s.delete(k); },
     async list(prefixe){ const r = await s.list({ prefix: prefixe }); return (r.blobs || []).map((b) => b.key).sort(); },
   };

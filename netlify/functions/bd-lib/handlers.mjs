@@ -154,6 +154,7 @@ export function handlerInteret(d){
 // toujours la même commande et la même session Stripe (double clic, nouvel essai après coupure).
 const CLE_ACHAT = /^[A-Za-z0-9_-]{22,64}$/;
 const ETATS_OUVERTS = ['creee', 'checkout_ouvert'];
+const ETATS_CHECKOUT_TERMINES = new Set(['echoue', 'expire']);
 
 export function handlerAchat(d){
   return protege(d, 'achat', async (req, context) => {
@@ -199,7 +200,13 @@ export function handlerAchat(d){
       if(v.commandes.includes(id)) return undefined;
       v.commandes.push(id); return v;
     });
-    const c = await lireCommande(s, id);
+    // Après une erreur réseau, les coordonnées restent corrigeables avec la même clé.
+    // L'adresse et l'offre restent celles de l'index d'achat ; aucune commande réglée n'est modifiée.
+    const { valeur: c } = await majCommande(s, id, (x) => {
+      if(!ETATS_OUVERTS.includes(x.statut)) return undefined;
+      if(x.prenoms === prenoms && x.nom === nom && x.whatsapp === whatsapp) return undefined;
+      Object.assign(x, { prenoms, nom, whatsapp }); trace(x, maintenant, 'coordonnees_actualisees'); return x;
+    });
     if(payee(c)) return json(409, { erreur: 'deja_paye', reference: id });
     if(!ETATS_OUVERTS.includes(c.statut)) return json(409, { erreur: 'etat' });
 
@@ -298,7 +305,12 @@ export function handlerPaiement(d){
       const ref = await s.getJSON('cs/' + sid);
       const c0 = ref && await lireCommande(s, ref.commande);
       if(!c0) return json(200, { statut: 'inconnu' });
-      if(!payee(c0) || !c0.paiement || c0.paiement.session !== sid) return json(200, { statut: 'en_attente' });
+      const tentative = (c0.sessionsCheckout || []).find((x) => x.id === sid);
+      const paiementDeCetteSession = payee(c0) && c0.paiement && c0.paiement.session === sid;
+      if(!paiementDeCetteSession && tentative && ETATS_CHECKOUT_TERMINES.has(tentative.etat)) {
+        return json(200, { statut: tentative.etat, achat: '/achat-bd?offre=' + c0.offre });
+      }
+      if(!paiementDeCetteSession) return json(200, { statut: 'en_attente' });
       // Accès direct une seule fois, depuis la page de retour, peu après le paiement constaté par le webhook.
       // La réclamation est une écriture conditionnelle : de deux retours simultanés, un seul l'obtient.
       let reclame = false;
@@ -354,21 +366,36 @@ export function handlerWebhook(d){
       return marquer(resultat);
     };
 
+    // Les événements d'échec et d'attente doivent eux aussi appartenir à une session enregistrée.
+    if(!(c.sessionsCheckout || []).some((x) => x.id === cs.id)) return anomalie([`session ${cs.id} non enregistrée pour cette commande`], 'Paiement non conforme', `Commande ${c.id}, session ${cs.id} : session non enregistrée. Aucun état modifié.`, 'ecart:' + cs.id, 'anomalie');
+
     if(ev.type === 'checkout.session.expired'){
-      await majCommande(s, c.id, unefois((x) => { trace(x, maintenant, 'checkout_expire', { evt: ev.id, session: cs.id }); return x; }));
+      await majCommande(s, c.id, unefois((x) => {
+        if(payee(x)) return undefined;
+        x.sessionsCheckout.find((y) => y.id === cs.id).etat = 'expire'; x.statut = 'checkout_expire';
+        trace(x, maintenant, 'checkout_expire', { evt: ev.id, session: cs.id }); return x;
+      }));
       return marquer('expire');
     }
     if(ev.type === 'checkout.session.async_payment_failed'){
-      await majCommande(s, c.id, unefois((x) => { if(payee(x)) return undefined; x.statut = 'creee'; trace(x, maintenant, 'paiement_differe_echoue', { evt: ev.id }); return x; }));
+      await majCommande(s, c.id, unefois((x) => {
+        if(payee(x)) return undefined;
+        x.sessionsCheckout.find((y) => y.id === cs.id).etat = 'echoue'; x.statut = 'paiement_echoue';
+        trace(x, maintenant, 'paiement_differe_echoue', { evt: ev.id, session: cs.id }); return x;
+      }));
       return marquer('paiement_echoue');
     }
     if(cs.payment_status !== 'paid'){
       if(ev.type === 'checkout.session.async_payment_succeeded') return anomalie(['async_payment_succeeded sans payment_status=paid'], 'Paiement incohérent', `Commande ${c.id}, session ${cs.id} : succès annoncé sans statut payé. Aucun accès ouvert.`, 'incoherent:' + ev.id, 'anomalie');
-      await majCommande(s, c.id, unefois((x) => { if(payee(x)) return undefined; x.statut = 'paiement_en_cours'; trace(x, maintenant, 'paiement_en_cours', { evt: ev.id }); return x; }));
+      await majCommande(s, c.id, unefois((x) => {
+        const tentative = x.sessionsCheckout.find((y) => y.id === cs.id);
+        if(payee(x) || ETATS_CHECKOUT_TERMINES.has(tentative.etat)) return undefined;
+        tentative.etat = 'en_cours'; x.statut = 'paiement_en_cours';
+        trace(x, maintenant, 'paiement_en_cours', { evt: ev.id, session: cs.id }); return x;
+      }));
       return marquer('en_cours');
     }
     const ecarts = [];
-    if(!(c.sessionsCheckout || []).some((x) => x.id === cs.id)) ecarts.push(`session ${cs.id} non enregistrée pour cette commande`);
     if(cs.mode !== 'payment') ecarts.push(`mode ${cs.mode} au lieu de payment`);
     if(cs.amount_total !== o.montant) ecarts.push(`montant ${cs.amount_total} au lieu de ${o.montant}`);
     if(String(cs.currency) !== o.devise) ecarts.push(`devise ${cs.currency} au lieu de ${o.devise}`);

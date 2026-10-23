@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import { lireConfig } from '../netlify/functions/bd-lib/config.mjs';
 import { magasinMemoire, magasinAiguille, plan, contexteDeploiement, adapter, maj, creerSiNouveau } from '../netlify/functions/bd-lib/store.mjs';
 import { envoyeurCapture, envoyeurAucun, ESSAIS_MAX, VERROU_MS, mettreEnFile } from '../netlify/functions/bd-lib/outbox.mjs';
@@ -895,4 +896,107 @@ test('file : A termine pendant que B, qui a repris le message, envoie encore →
   ouvrir(); await travailB;
   [it] = await fileDe(m);
   assert.equal(it.statut, 'envoye'); assert.equal(captureB.envoyes.length, 1);
+});
+
+// ---------------- 16. Régressions relevées lors de la revue indépendante ----------------
+test('achat : après erreur Stripe, prénom/nom/WhatsApp corrigés sont conservés sans changer commande ni session', async () => {
+  const options = { stripeEchec: true };
+  const m = monde(options);
+  const corps = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+  assert.equal((await handlerAchat(m.d)(req('POST', corps))).status, 502);
+  const [cleCommande] = await m.d.store.list('commandes/');
+  const avant = await m.d.store.getJSON(cleCommande);
+  options.stripeEchec = false;
+  const corrige = { ...corps, prenoms: 'Éloïse Marie', nom: 'D’Arc-Besson', whatsapp: '+262 692 00 00 01' };
+  const reprise = await handlerAchat(m.d)(req('POST', corrige));
+  assert.equal(reprise.status, 200);
+  const reponse = await corpsDe(reprise);
+  assert.equal(reponse.reference, avant.id);
+  assert.equal(reponse.prenom, corrige.prenoms);
+  const apres = await m.d.store.getJSON(cleCommande);
+  assert.equal(apres.prenoms, corrige.prenoms);
+  assert.equal(apres.nom, corrige.nom);
+  assert.equal(apres.whatsapp, '+262692000001');
+  assert.equal(apres.email, avant.email);
+  assert.equal(apres.offre, avant.offre);
+  assert.equal((await m.d.store.list('commandes/')).length, 1);
+  assert.equal(m.sessions.length, 1);
+  await webhook(m, evenement('evt_coord_paye', 'checkout.session.completed', sessionPayee(avant.id)));
+  const interdit = await handlerAchat(m.d)(req('POST', { ...corrige, prenoms: 'Ne doit pas remplacer' }));
+  assert.deepEqual([interdit.status, (await corpsDe(interdit)).erreur], [409, 'deja_paye']);
+  assert.equal((await m.d.store.getJSON(cleCommande)).prenoms, corrige.prenoms);
+});
+
+test('retour : échec différé et expiration terminent l’attente ; événements tardifs sans régression après succès', async () => {
+  for(const [type, etat, statutCommande] of [
+    ['checkout.session.async_payment_failed', 'echoue', 'paiement_echoue'],
+    ['checkout.session.expired', 'expire', 'checkout_expire'],
+  ]){
+    const m = monde();
+    const corps = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+    const achat = await corpsDe(await handlerAchat(m.d)(req('POST', corps)));
+    const id = achat.reference; const sid = m.sessions[0];
+    const nonPayee = sessionPayee(id, '297', { id: sid, payment_status: 'unpaid' });
+    await webhook(m, evenement('evt_avant_' + etat, 'checkout.session.completed', nonPayee));
+    await webhook(m, evenement('evt_fin_' + etat, type, nonPayee));
+    const retour = await handlerPaiement(m.d)(req('POST', { action: 'statut', sessionId: sid }));
+    assert.deepEqual(await corpsDe(retour), { statut: etat, achat: '/achat-bd?offre=297' });
+    assert.equal(retour.headers.get('set-cookie'), null);
+    assert.equal((await m.d.store.list('ob/')).length, 0, 'aucune confirmation de succès');
+    assert.equal((await handlerAchat(m.d)(req('POST', corps))).status, 409, 'une session terminée ne se réutilise pas');
+    await webhook(m, evenement('evt_attente_tardive_' + etat, 'checkout.session.completed', nonPayee));
+    assert.equal((await m.d.store.getJSON('commandes/' + id)).statut, statutCommande);
+    // Un paiement vérifié prime toujours sur un échec, même reçu dans le désordre.
+    await webhook(m, evenement('evt_succes_' + etat, 'checkout.session.async_payment_succeeded', sessionPayee(id)));
+    await webhook(m, evenement('evt_echec_tardif_' + etat, type, nonPayee));
+    assert.equal((await m.d.store.getJSON('commandes/' + id)).statut, 'payee');
+    const succes = await handlerPaiement(m.d)(req('POST', { action: 'statut', sessionId: sid }));
+    assert.equal((await corpsDe(succes)).statut, 'paye');
+    assert.ok(succes.headers.get('set-cookie'));
+    const file = await Promise.all((await m.d.store.list('ob/')).map((k) => m.d.store.getJSON(k)));
+    assert.equal(file.filter((x) => x.type === 'confirmation').length, 1);
+  }
+});
+
+test('webhook : attente/échec/expiration d’une session non enregistrée ne changent pas la commande', async () => {
+  for(const type of ['checkout.session.completed', 'checkout.session.async_payment_failed', 'checkout.session.expired']){
+    const m = monde();
+    const { commande } = await commandeConfirmee(m);
+    const inconnue = sessionPayee(commande, '297', { id: 'cs_test_INCONNUE00000001', payment_status: 'unpaid' });
+    const r = await webhook(m, evenement('evt_non_enregistree', type, inconnue));
+    assert.equal((await corpsDe(r)).resultat, 'anomalie');
+    assert.equal((await m.d.store.getJSON('commandes/' + commande)).statut, 'checkout_ouvert');
+  }
+});
+
+test('page de retour : échec/expiration affichés avec reprise de la bonne offre, sans sondage supplémentaire', async () => {
+  const code = fs.readFileSync(new URL('../assets/bd-paiement.js', import.meta.url), 'utf8');
+  for(const statut of ['echoue', 'expire']){
+    const titre = { textContent: '' };
+    const aide = { textContent: '', liens: [], appendChild(n){ this.liens.push(n); } };
+    const elements = {
+      'bdq-nojs': { remove(){} },
+      'bdp-attente': { hidden: false },
+      'bdp-inconnu': { hidden: true, querySelector(s){ return s === '.bdq-title' ? titre : aide; } },
+      'bdp-confirme': { hidden: true },
+    };
+    let requetes = 0; let sondages = 0;
+    vm.runInNewContext(code, {
+      document: { readyState: 'complete', getElementById(id){ return elements[id]; }, createElement(tag){ return { tag }; } },
+      location: { pathname: '/paiement-bd-retour', search: '?session_id=cs_test_FICTIVE000001' },
+      history: { replaceState(){} },
+      URLSearchParams,
+      fetch: async () => { requetes += 1; return { json: async () => ({ statut, achat: '/achat-bd?offre=891' }) }; },
+      setTimeout(){ sondages += 1; },
+    });
+    await new Promise(setImmediate);
+    assert.equal(requetes, 1);
+    assert.equal(sondages, 0);
+    assert.equal(elements['bdp-attente'].hidden, true);
+    assert.equal(elements['bdp-confirme'].hidden, true);
+    assert.equal(elements['bdp-inconnu'].hidden, false);
+    assert.match(titre.textContent, statut === 'expire' ? /expiré/ : /pas abouti/);
+    assert.match(aide.textContent, /Aucun achat n’est confirmé/);
+    assert.equal(aide.liens[0].href, '/achat-bd?offre=891');
+  }
 });

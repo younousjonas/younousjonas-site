@@ -26,6 +26,16 @@
           $(b.acces ? 'bdp-c-acces' : 'bdp-c-sans-acces').hidden = false;
           montrer('bdp-confirme', ETATS); return;
         }
+        if(b.statut === 'echoue' || b.statut === 'expire'){
+          var bloc = $('bdp-inconnu');
+          bloc.querySelector('.bdq-title').textContent = b.statut === 'expire' ? 'Cette tentative de paiement a expiré.' : 'Le paiement n’a pas abouti.';
+          var aide = bloc.querySelector('.bdq-hint');
+          aide.textContent = 'Aucun achat n’est confirmé pour cette tentative. ';
+          if(/^\/achat-bd\?offre=(297|891)$/.test(b.achat || '')){
+            var lien = document.createElement('a'); lien.href = b.achat; lien.textContent = 'Recommencer le paiement'; aide.appendChild(lien);
+          }
+          montrer('bdp-inconnu', ETATS); return;
+        }
         if(b.statut === 'inconnu' && essais > 3){ montrer('bdp-inconnu', ETATS); return; }
         if(essais < 30) setTimeout(sonder, 2000);
         else $('bdp-attente-texte').textContent = 'La confirmation prend plus de temps que prévu. Votre lien personnel vous sera transmis dès qu’elle arrive ; vous pouvez fermer cette page.';
