@@ -1,0 +1,13 @@
+{
+  "name": "younousjonas-site",
+  "private": true,
+  "description": "Site statique younousjonas.com ; dépendances des seules fonctions Netlify bd-* (albums BD personnelle).",
+  "type": "commonjs",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  },
+  "scripts": {
+    "test": "node --test tests/bd.test.mjs"
+  }
+}

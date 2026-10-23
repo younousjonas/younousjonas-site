@@ -28,6 +28,16 @@ const EVENEMENTS_TRAITES = new Set([
   "charge.dispute.created",
 ]);
 
+// Paiements des albums « BD personnelle » (même compte Stripe) : ils ont leur propre
+// webhook (bd-stripe-webhook) et ne doivent jamais partir vers Make ni Brevo.
+// Repérés par les métadonnées `bd_commande` (Checkout, PaymentIntent) ou par la
+// description « BD personnelle — … », reprise par la charge (remboursements).
+function estPaiementBD(obj) {
+  if (!obj || typeof obj !== "object") return false;
+  if (obj.metadata && obj.metadata.bd_commande) return true;
+  return typeof obj.description === "string" && obj.description.startsWith("BD personnelle — ");
+}
+
 // Vérifie l'en-tête `Stripe-Signature` (format `t=…,v1=…`) contre le corps brut.
 // Tolérance de 5 min sur l'horodatage pour bloquer le rejeu.
 function signatureValide(rawBody, header, secret) {
@@ -82,6 +92,10 @@ exports.handler = async (event) => {
 
   console.log("Stripe event:", stripeEvent.type, stripeEvent.id);
 
+  if (estPaiementBD(stripeEvent.data?.object)) {
+    return { statusCode: 200, body: "Ignoré (BD personnelle)." };
+  }
+
   if (!EVENEMENTS_TRAITES.has(stripeEvent.type)) {
     return { statusCode: 200, body: "Ignoré." };
   }
@@ -127,3 +141,5 @@ exports.handler = async (event) => {
 
   return { statusCode: 200, body: "OK" };
 };
+
+exports.estPaiementBD = estPaiementBD;

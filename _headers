@@ -1,0 +1,12 @@
+# Pages privées et de paiement des albums BD : jamais indexées, jamais mises en cache,
+# aucun Referer transmis (le lien personnel ne quitte pas la page).
+/mon-album*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
+/paiement-bd*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
+/demande-bd*
+  Referrer-Policy: strict-origin-when-cross-origin

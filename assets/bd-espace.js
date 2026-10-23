@@ -1,19 +1,13 @@
-/* Moteur des questionnaires « BD personnelle ».
-   La page définit window.BDQ (texte remis à la personne, ordre des questions) ;
-   ce script construit le formulaire, garde un brouillon sur l'appareil,
-   vérifie les quelques champs nécessaires et envoie l'ensemble à Netlify Forms
-   (formulaire déclaré en HTML statique, champs cachés). Aucun envoi ailleurs,
-   aucun suivi, aucune ressource tierce. */
+/* Espace privé « Mon album » : questionnaire complet, servi par la fonction
+   bd-questionnaire après paiement constaté et ouverture d'une session privée
+   (cookie HttpOnly). Le brouillon est enregistré côté serveur, dans l'espace
+   de la commande : rien n'est gardé dans le navigateur. Aucun suivi, aucun tiers. */
 (function(){
   'use strict';
-  var S = window.BDQ;
-  if(!S) return;
-
+  var API = '/.netlify/functions/bd-questionnaire';
+  var S = null;                       // questionnaire reçu du serveur
   var root, form, draftBar, progressText, progressBar, errorsBox, statusEl;
-  var saveTimer = null;
-  var sent = false;
-  var storageOk = (function(){ try{ var k='__bdq'; localStorage.setItem(k,'1'); localStorage.removeItem(k); return true; }catch(e){ return false; } })();
-
+  var saveTimer = null, sent = false, dernierEnvoi = '';
   /* ---------- petits outils DOM ---------- */
   function el(tag, attrs, kids){
     var n = document.createElement(tag);
@@ -201,55 +195,6 @@
     });
   }
   function cssEsc(s){ return s.replace(/["\\]/g, '\\$&'); }
-
-  /* ---------- brouillon sur l'appareil ---------- */
-  function repeatCounts(){
-    var c = {};
-    root.querySelectorAll('[data-repeat]').forEach(function(r){ c[r.getAttribute('data-repeat')] = parseInt(r.getAttribute('data-count'), 10); });
-    return c;
-  }
-  function scheduleSave(){
-    if(!storageOk || !S.draftKey || sent) return;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveDraft, 400);
-  }
-  function saveDraft(){
-    if(sent) return;
-    try{
-      localStorage.setItem(S.draftKey, JSON.stringify({v:1, at: new Date().toISOString(), counts: repeatCounts(), values: collect()}));
-      showDraftBar('Brouillon gardé sur cet appareil à ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '. Il reste dans ce navigateur jusqu’à l’envoi ; il n’est transmis à personne.');
-    }catch(e){
-      // Mémoire pleine ou refusée : on le dit, sans laisser croire à une sauvegarde.
-      showDraftBar('Attention : le brouillon ne peut pas être gardé sur cet appareil. Vos dernières réponses seront perdues si la page se ferme ; pensez à envoyer en une fois.', true);
-    }
-  }
-  function loadDraft(){
-    if(!storageOk || !S.draftKey) return false;
-    try{
-      var d = JSON.parse(localStorage.getItem(S.draftKey) || 'null');
-      if(!d || !d.values) return false;
-      allRepeats().forEach(function(q){
-        var cont = root.querySelector('[data-repeat="' + q.id + '"]');
-        var n = d.counts && d.counts[q.id];
-        if(cont && n && n > (q.initial || 1)) renderRepeat(q, cont, Math.min(n, q.max || n));
-      });
-      applyValues(d.values);
-      var when = new Date(d.at);
-      showDraftBar('Brouillon repris : vos réponses du ' + when.toLocaleDateString('fr-FR') + ' à ' + when.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + ' sont revenues. Elles restent sur cet appareil jusqu’à l’envoi.');
-      return true;
-    }catch(e){ return false; }
-  }
-  function clearDraft(){
-    // Annule une sauvegarde en attente : sinon elle recréerait le brouillon juste après l'effacement.
-    clearTimeout(saveTimer); saveTimer = null;
-    try{ if(S.draftKey) localStorage.removeItem(S.draftKey); }catch(e){}
-  }
-  function showDraftBar(text, warn){
-    if(!draftBar) return;
-    draftBar.querySelector('span').textContent = text;
-    draftBar.classList.add('visible');
-    draftBar.classList.toggle('warn', !!warn);
-  }
   function allQuestions(){
     var out = [];
     S.sections.forEach(function(s){ s.items.forEach(function(q){ out.push(q); }); });
@@ -280,8 +225,7 @@
       }
       if(!q.req) return;
       var ok;
-      if(q.id === S.emailField) ok = vals[q.id] && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vals[q.id]);
-      else ok = answered(q, vals);
+      ok = answered(q, vals);
       if(!ok) problems.push({q:q, text: (q.num ? q.num + '. ' : '') + (q.short || q.label)});
     });
     return problems;
@@ -300,162 +244,101 @@
     errorsBox.focus();
   }
 
-  /* ---------- mise en texte des réponses ---------- */
-  function asText(v){ return Array.isArray(v) ? v.join(' ; ') : v; }
-  function renderAnswers(vals){
-    var lines = [];
-    S.sections.forEach(function(s){
-      lines.push('', '== ' + s.title + ' ==');
-      s.items.forEach(function(q){
-        var head = (q.num ? q.num + '. ' : '') + q.label;
-        if(q.type === 'accords'){
-          q.items.forEach(function(a){
-            lines.push('- ' + a.label + ' : ' + (vals[a.id] ? 'OUI' : 'non coché'));
-            if(a.withText && vals[a.id + '.texte']) lines.push('  ' + vals[a.id + '.texte']);
-          });
-          return;
-        }
-        var parts = [];
-        if(vals[q.id + '.__later']) parts.push('[Je préfère en parler pendant l’entretien.]');
-        if(q.type === 'text' || q.type === 'textarea'){
-          if(vals[q.id]) parts.push(vals[q.id]);
-          if(vals[q.id + '.alt']) parts.push('[' + q.alt + ']');
-        } else if(q.type === 'radio' || q.type === 'multi'){
-          if(vals[q.id]) parts.push(asText(vals[q.id]) + (vals[q.id + '.autre'] ? ' — ' + vals[q.id + '.autre'] : ''));
-        } else if(q.type === 'fields'){
-          q.fields.forEach(function(f){
-            var k = q.id + '.' + f.id;
-            if(vals[k]) parts.push((f.label || f.id) + ' : ' + asText(vals[k]) + (vals[k + '.autre'] ? ' — ' + vals[k + '.autre'] : ''));
-          });
-        } else if(q.type === 'repeat'){
-          var cont = root.querySelector('[data-repeat="' + q.id + '"]');
-          var n = parseInt(cont.getAttribute('data-count'), 10);
-          for(var i = 0; i < n; i++){
-            var sub = [];
-            q.fields.forEach(function(f){
-              var k = q.id + '.' + i + '.' + f.id;
-              if(vals[k]) sub.push('   ' + (f.label || f.id) + ' : ' + asText(vals[k]) + (vals[k + '.autre'] ? ' — ' + vals[k + '.autre'] : ''));
-            });
-            if(sub.length) parts.push(q.unit + ' ' + (i + 1) + '\n' + sub.join('\n'));
-          }
-        } else if(q.type === 'themes'){
-          if(vals[q.id]) parts.push('Thèmes choisis : ' + asText(vals[q.id]));
-          q.themes.forEach(function(t, i){
-            if(!(vals[q.id] || []).includes(t.label)) return;
-            t.questions.forEach(function(sq, j){
-              var k = q.id + '.' + i + '.' + j;
-              if(vals[k]) parts.push('   ' + t.label + ' — ' + sq + ' : ' + vals[k]);
-            });
-          });
-        }
-        lines.push('', head);
-        lines.push(parts.length ? parts.join('\n') : '(sans réponse)');
-      });
-    });
-    return lines.join('\n').trim();
+  /* ---------- brouillon côté serveur ---------- */
+  function repeatCounts(){
+    var c = {};
+    root.querySelectorAll('[data-repeat]').forEach(function(r){ c[r.getAttribute('data-repeat')] = parseInt(r.getAttribute('data-count'), 10); });
+    return c;
   }
-
-  /* Réponses envoyées : on retire les sous-réponses des thèmes décochés.
-     Elles restent dans le brouillon local, pour le cas où la personne recoche. */
-  function payloadValues(vals){
-    var out = {};
-    var drop = [];
-    allQuestions().forEach(function(q){
-      if(q.type !== 'themes') return;
-      var chosen = vals[q.id] || [];
-      q.themes.forEach(function(t, i){ if(chosen.indexOf(t.label) === -1) drop.push(q.id + '.' + i + '.'); });
+  function showDraftBar(text, warn){
+    draftBar.querySelector('span').textContent = text;
+    draftBar.classList.add('visible');
+    draftBar.classList.toggle('warn', !!warn);
+  }
+  function heure(iso){ return new Date(iso).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}); }
+  function scheduleSave(){ if(sent) return; clearTimeout(saveTimer); saveTimer = setTimeout(saveDraft, 1500); }
+  function saveDraft(){
+    if(sent) return Promise.resolve();
+    clearTimeout(saveTimer); saveTimer = null;
+    var corps = JSON.stringify({ valeurs: collect(), comptes: repeatCounts() });
+    if(corps === dernierEnvoi) return Promise.resolve();
+    return fetch(API, { method:'PUT', headers:{'Content-Type':'application/json'}, body: corps, credentials:'same-origin' })
+      .then(function(r){
+        if(r.status === 401) { sessionPerdue(); return; }
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json().then(function(b){ dernierEnvoi = corps; showDraftBar('Brouillon enregistré à ' + heure(b.majLe) + ' dans votre espace privé. Vous pouvez reprendre plus tard avec votre lien personnel.'); });
+      })
+      .catch(function(){ showDraftBar('Attention : le brouillon n’a pas pu être enregistré. Vos dernières réponses seront perdues si la page se ferme ; réessayez dans un moment.', true); });
+  }
+  function applyDraft(d){
+    if(!d || !d.valeurs) return;
+    allRepeats().forEach(function(q){
+      var cont = root.querySelector('[data-repeat="' + q.id + '"]');
+      var n = d.comptes && d.comptes[q.id];
+      if(cont && n && n > (q.initial || 1)) renderRepeat(q, cont, Math.min(n, q.max || n));
     });
-    Object.keys(vals).forEach(function(k){
-      if(drop.some(function(pfx){ return k.indexOf(pfx) === 0; })) return;
-      out[k] = vals[k];
-    });
-    return out;
+    applyValues(d.valeurs);
+    dernierEnvoi = JSON.stringify({ valeurs: collect(), comptes: repeatCounts() });
+    showDraftBar('Brouillon repris : vos réponses enregistrées à ' + heure(d.majLe) + ' sont revenues.');
+  }
+  function effacerBrouillon(){
+    if(!confirm('Effacer toutes les réponses enregistrées de ce questionnaire ?')) return;
+    clearTimeout(saveTimer);
+    fetch(API, { method:'DELETE', credentials:'same-origin' }).then(function(){ location.reload(); });
   }
 
   /* ---------- envoi ---------- */
-  function reference(){
-    var d = new Date();
-    var p = function(x){ return String(x).padStart(2, '0'); };
-    var rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
-    return 'BD-' + S.code + '-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + rnd;
-  }
-  function setHidden(name, value){
-    var n = form.querySelector('input[type=hidden][name="' + name + '"]');
-    if(n) n.value = value || '';
-  }
   function downloadCopy(ref, text){
-    var blob = new Blob([S.offre + '\nRéférence : ' + ref + '\n' + text + '\n'], {type:'text/plain;charset=utf-8'});
+    var blob = new Blob([S.offre + '\nRéférence : ' + ref + '\n\n' + text + '\n'], {type:'text/plain;charset=utf-8'});
     var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = ref + '-mes-reponses.txt';
+    a.href = URL.createObjectURL(blob); a.download = ref + '-mes-reponses.txt';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
   function onSubmit(e){
     e.preventDefault();
-    // Sauvegarde immédiate de la dernière saisie : un envoi refusé (champ manquant)
-    // ou un échec réseau ne doit rien faire perdre. Un envoi réussi l'efface ensuite.
-    clearTimeout(saveTimer);
-    if(storageOk && !sent && S.draftKey) saveDraft();
-    var vals = payloadValues(collect());
+    var vals = collect();
     var problems = validate(vals);
-    if(problems.length){ showProblems(problems); return; }
+    if(problems.length){ saveDraft(); showProblems(problems); return; }
     errorsBox.classList.remove('visible');
-
-    var ref = reference();
-    var text = renderAnswers(vals);
-    setHidden('reference', ref);
-    setHidden('offre', S.offre);
-    setHidden('version', S.version);
-    setHidden('prenom', vals[S.nameField] || '');
-    setHidden('email', vals[S.emailField] || '');
-    setHidden('whatsapp', vals[S.phoneField] || '');
-    setHidden('accord_reponses', vals.accord_reponses ? 'oui' : 'non');
-    setHidden('accord_documents', vals.accord_documents ? 'oui' : 'non');
-    setHidden('accord_discuter', vals.accord_discuter ? ('oui — ' + (vals['accord_discuter.texte'] || '')) : 'non');
-    setHidden('reponses', text);
-    setHidden('reponses_json', JSON.stringify({counts: repeatCounts(), values: vals}));
-    setHidden('envoye_le', new Date().toISOString());
-
-    var btn = form.querySelector('button[type=submit]');
-    btn.disabled = true;
-    statusEl.className = 'bdq-status';
-    statusEl.textContent = 'Envoi en cours…';
-    // Seuls les champs déclarés en HTML (cachés + pot de miel) partent :
-    // les réponses voyagent déjà, mises en texte, dans « reponses ».
-    var params = new URLSearchParams();
-    form.querySelectorAll('input[type=hidden][name], input[name="bot-field"]').forEach(function(n){ params.append(n.name, n.value); });
-    var body = params.toString();
-    fetch('/', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: body})
-      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); })
-      .then(function(){
-        sent = true;
-        clearDraft();
-        document.querySelectorAll('[data-ref]').forEach(function(n){ n.textContent = ref; });
-        var dl = document.querySelector('[data-download]');
-        if(dl) dl.addEventListener('click', function(){ downloadCopy(ref, text); });
-        document.body.classList.add('bdq-sent');
-        window.scrollTo(0, 0);
-        var done = document.querySelector('.bdq-done'); if(done) done.focus();
-      })
-      .catch(function(){
+    var btn = form.querySelector('button[type=submit]'); btn.disabled = true;
+    statusEl.className = 'bdq-status'; statusEl.textContent = 'Envoi en cours…';
+    saveDraft().then(function(){
+      return fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({ action:'envoyer', valeurs: collect(), comptes: repeatCounts() }) });
+    }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(b){ return { r:r, b:b }; }); })
+      .then(function(x){
+        if(x.r.ok){
+          sent = true; clearTimeout(saveTimer);
+          document.querySelectorAll('[data-ref]').forEach(function(n){ n.textContent = x.b.reference; });
+          var dl = document.querySelector('[data-download]'); if(dl) dl.addEventListener('click', function(){ downloadCopy(x.b.reference, x.b.texte || ''); });
+          document.body.classList.add('bdq-sent'); window.scrollTo(0, 0);
+          return;
+        }
         btn.disabled = false;
+        if(x.r.status === 401){ sessionPerdue(); return; }
+        if(x.r.status === 422 && x.b.manques){
+          statusEl.textContent = '';
+          errorsBox.innerHTML = ''; errorsBox.appendChild(document.createTextNode('Il manque quelques réponses nécessaires :'));
+          var ul = document.createElement('ul'); x.b.manques.forEach(function(m){ var li = document.createElement('li'); li.textContent = m; ul.appendChild(li); });
+          errorsBox.appendChild(ul); errorsBox.classList.add('visible'); errorsBox.focus(); return;
+        }
         statusEl.className = 'bdq-status error';
-        statusEl.textContent = 'L’envoi n’a pas fonctionné. Vos réponses restent sur cet appareil : réessayez dans un moment, ou écrivez à hello@younousjonas.com.';
-      });
+        statusEl.textContent = x.r.status === 409 ? 'Ce questionnaire a déjà été envoyé.' : 'L’envoi n’a pas fonctionné. Vos réponses restent enregistrées : réessayez dans un moment.';
+      })
+      .catch(function(){ btn.disabled = false; statusEl.className = 'bdq-status error'; statusEl.textContent = 'L’envoi n’a pas fonctionné. Vos réponses restent enregistrées : réessayez dans un moment.'; });
   }
 
-  /* ---------- démarrage ---------- */
-  function start(){
-    root = document.getElementById('bdq-root');
-    form = document.getElementById('bdq-form');
-    draftBar = document.getElementById('bdq-draft');
-    progressText = document.getElementById('bdq-progress-text');
-    progressBar = document.getElementById('bdq-progress-bar');
-    errorsBox = document.getElementById('bdq-errors');
-    statusEl = document.getElementById('bdq-status');
-    var nojs = document.getElementById('bdq-nojs'); if(nojs) nojs.remove();
-
+  /* ---------- session et démarrage ---------- */
+  function etat(id){ ['bde-chargement','bde-perdu','bde-espace','bde-deja'].forEach(function(x){ var n = document.getElementById(x); if(n) n.hidden = (x !== id); }); }
+  function sessionPerdue(){ clearTimeout(saveTimer); etat('bde-perdu'); }
+  function construire(d){
+    S = { sections: d.schema.sections, later: !!d.schema.later, offre: d.offre };
+    document.getElementById('bde-offre').textContent = d.offre;
+    document.getElementById('bde-prenom').textContent = d.prenom;
+    document.getElementById('bde-ref').textContent = d.reference;
+    var pd = document.getElementById('bde-prenom-deja'); if(pd) pd.textContent = d.prenom;
+    if(d.envoye){ etat('bde-deja'); return; }
+    var intro = document.getElementById('bde-intro-' + d.code); if(intro) intro.hidden = false;
     S.sections.forEach(function(s){
       var sec = el('section', {class:'bdq-section'});
       sec.appendChild(el('h2', {text: s.title}));
@@ -464,20 +347,50 @@
       if(s.after) sec.appendChild(el('p', {class:'bdq-notice', html: s.after}));
       root.appendChild(sec);
     });
-    form.hidden = false;
-
-    if(!storageOk && draftBar){ showDraftBar('Attention : le brouillon ne peut pas être gardé sur cet appareil (navigation privée ou stockage bloqué). Vos réponses seront perdues si la page se ferme ; pensez à envoyer en une fois.', true); draftBar.querySelector('button').hidden = true; }
-    loadDraft();
-    if(draftBar){
-      draftBar.querySelector('button').addEventListener('click', function(){
-        if(!confirm('Effacer toutes les réponses de ce questionnaire sur cet appareil ?')) return;
-        clearDraft(); location.reload();
-      });
-    }
+    applyDraft(d.brouillon);
     root.addEventListener('input', function(){ refreshDynamic(); scheduleSave(); updateProgress(); });
     root.addEventListener('change', function(){ refreshDynamic(); scheduleSave(); updateProgress(); });
     form.addEventListener('submit', onSubmit);
+    draftBar.querySelector('button').addEventListener('click', effacerBrouillon);
     refreshDynamic(); updateProgress();
+    etat('bde-espace');
+  }
+  function charger(){
+    return fetch(API, { credentials:'same-origin' }).then(function(r){
+      if(r.status === 401){ etat('bde-perdu'); return; }
+      return r.json().then(construire);
+    }).catch(function(){ etat('bde-perdu'); });
+  }
+  function ouvrir(cle){
+    return fetch('/.netlify/functions/bd-acces', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({ action:'ouvrir', jeton: cle }) });
+  }
+  function recuperer(e){
+    e.preventDefault();
+    var f = e.target; var msg = document.getElementById('bde-recup-msg');
+    fetch('/.netlify/functions/bd-acces', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({ action:'recuperer', email: f.email.value.trim() }) })
+      .then(function(r){ return r.json(); }).then(function(b){ msg.textContent = b.message || 'Demande reçue.'; })
+      .catch(function(){ msg.textContent = 'La demande n’a pas pu partir. Réessayez dans un moment.'; });
+  }
+  function fermer(){
+    fetch('/.netlify/functions/bd-acces', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({ action:'fermer' }) })
+      .then(function(){ location.replace('/mon-album'); });
+  }
+  function start(){
+    root = document.getElementById('bdq-root'); form = document.getElementById('bdq-form');
+    draftBar = document.getElementById('bdq-draft'); progressText = document.getElementById('bdq-progress-text');
+    progressBar = document.getElementById('bdq-progress-bar'); errorsBox = document.getElementById('bdq-errors'); statusEl = document.getElementById('bdq-status');
+    var nojs = document.getElementById('bdq-nojs'); if(nojs) nojs.remove();
+    document.getElementById('bde-recup').addEventListener('submit', recuperer);
+    document.querySelectorAll('[data-fermer]').forEach(function(b){ b.addEventListener('click', fermer); });
+    // Le lien personnel est dans le fragment (#cle=…) : jamais envoyé au serveur dans l'URL,
+    // jamais transmis en Referer. On le retire aussitôt de la barre d'adresse.
+    // Un lien ouvert dans un onglet déjà sur cette page ne change que le fragment : on le traite aussi.
+    window.addEventListener('hashchange', function(){ if(/^#cle=/.test(location.hash)) location.reload(); });
+    etat('bde-chargement');
+    var m = location.hash.match(/^#cle=([A-Za-z0-9_-]{43})$/);
+    if(location.hash) history.replaceState(null, '', location.pathname);
+    if(m){ ouvrir(m[1]).then(function(r){ if(r.ok) return charger(); etat('bde-perdu'); }).catch(function(){ etat('bde-perdu'); }); }
+    else charger();
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

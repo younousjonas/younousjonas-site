@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mon album — espace privé - Younous Jonas</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/bd.css">
+  <script src="/assets/config.js"></script>
+  <script defer src="/assets/main.js"></script>
+  <script defer src="/assets/bd-espace.js"></script>
+</head>
+<body>
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="/">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="/bd-personnelle.html">BD personnelle</a><a href="/contact.html">Contact</a></div></div></nav>
+
+<main>
+  <section class="bdq-head"><div class="container" style="max-width:760px">
+    <div class="kicker">Espace privé</div>
+    <h1>Mon album</h1>
+  </div></section>
+
+  <section class="bdq-wrap"><div class="container">
+    <p class="bdq-nojs" id="bdq-nojs">Cet espace a besoin de JavaScript. Si votre navigateur le bloque, écrivez à <a href="mailto:hello@younousjonas.com">hello@younousjonas.com</a>.</p>
+
+    <div id="bde-chargement" hidden><p class="bdq-notice">Ouverture de votre espace…</p></div>
+
+    <div id="bde-perdu" hidden>
+      <div class="bdq-q">
+        <p class="bdq-title">Ce lien n’est pas valable, a expiré, ou votre session est terminée.</p>
+        <p class="bdq-hint">Votre lien personnel vous a été transmis après votre paiement. S’il ne fonctionne plus, indiquez l’adresse électronique de votre commande : si une commande réglée y correspond, un nouveau lien y est envoyé, et le précédent cesse de fonctionner.</p>
+        <form id="bde-recup" class="bdq-field" novalidate>
+          <label class="bdq-field"><span>Adresse électronique de la commande</span><input name="email" type="email" autocomplete="email"></label>
+          <button class="bdq-small-btn" type="submit">Recevoir un nouveau lien</button>
+          <p class="bdq-notice" id="bde-recup-msg" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+
+    <div id="bde-deja" hidden>
+      <div class="bdq-done" style="display:block">
+        <h2>Votre questionnaire est déjà envoyé.</h2>
+        <p>Merci <span id="bde-prenom-deja"></span>. Younous l’a reçu et revient vers vous pour la suite.</p>
+        <div class="actions" style="justify-content:center"><button class="btn secondary" type="button" data-fermer>Fermer ma session</button></div>
+      </div>
+    </div>
+
+    <div id="bde-espace" hidden>
+      <div class="bdq-intro">
+        <p>Bonjour <strong id="bde-prenom"></strong>. Voici le questionnaire de votre album « <span id="bde-offre"></span> » (référence <span id="bde-ref"></span>).</p>
+        <div id="bde-intro-297" hidden>
+          <p>Préparons le chapitre de votre vie que vous souhaitez raconter. Votre album comprendra 40 pages de bande dessinée en couleur et une couverture personnalisée.</p>
+          <p>Ce questionnaire nous aide à choisir le fil de votre histoire. Vous pouvez répondre simplement, avec vos mots, sans chercher à écrire un récit parfait. Vous pourrez préciser ou corriger vos réponses lors de la proposition narrative.</p>
+          <p>Temps indicatif : 15 à 25 minutes. Vous pouvez laisser les questions facultatives sans réponse.</p>
+        </div>
+        <div id="bde-intro-891" hidden>
+          <p>Retrouvons les moments qui donnent son fil à votre histoire. Votre album comprendra 80 pages de bande dessinée en couleur et une couverture personnalisée. Deux entretiens individuels d’une heure sont inclus pour approfondir votre récit. Ce questionnaire prépare ces échanges.</p>
+          <p>Vous pouvez le compléter en plusieurs fois, répondre dans l’ordre qui vous convient et laisser des questions ouvertes. Vous n’avez pas besoin de raconter toute votre vie, ni d’aborder un sujet que vous souhaitez garder privé.</p>
+          <p>Temps indicatif : plusieurs séances de 15 à 20 minutes, selon le détail souhaité.</p>
+          <p>Toutes les questions sont facultatives, sauf indication contraire. Pour chaque question, vous pouvez répondre : « Je préfère en parler pendant l’entretien. »</p>
+        </div>
+        <p class="bdq-notice">Vos réponses sont enregistrées au fil de la saisie dans l’espace privé de votre commande : vous pouvez fermer la page et reprendre plus tard avec votre lien personnel. <strong>Appareil partagé :</strong> pensez à fermer votre session à la fin. <button class="bdq-small-btn" type="button" data-fermer>Fermer ma session</button></p>
+      </div>
+
+      <div class="bdq-draft" id="bdq-draft" role="status" aria-live="polite"><span></span><button type="button">Effacer le brouillon</button></div>
+      <div class="bdq-progress" aria-live="off"><span id="bdq-progress-text"></span><div class="bar"><span id="bdq-progress-bar"></span></div></div>
+
+      <form class="bdq-form" id="bdq-form" novalidate>
+        <div id="bdq-root"></div>
+        <div class="bdq-errors" id="bdq-errors" tabindex="-1" role="alert"></div>
+        <div class="bdq-actions">
+          <button class="btn" type="submit">Envoyer mon questionnaire</button>
+          <p class="bdq-status" id="bdq-status" role="status" aria-live="polite"></p>
+        </div>
+      </form>
+
+      <div class="bdq-done" tabindex="-1">
+        <h2>Votre questionnaire est envoyé.</h2>
+        <p>Référence : <span class="ref" data-ref></span></p>
+        <p>Younous le lit et revient vers vous pour la suite. Vous pouvez garder une copie de vos réponses sur cet appareil.</p>
+        <div class="actions" style="justify-content:center"><button class="btn secondary" type="button" data-download>Télécharger une copie de mes réponses</button><button class="btn secondary" type="button" data-fermer>Fermer ma session</button></div>
+      </div>
+    </div>
+  </div></section>
+</main>
+
+<footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> · <a href="/mentions-legales.html">Mentions légales</a> · <a href="/confidentialite.html">Confidentialité</a></div></div></footer>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirmation du paiement — BD personnelle - Younous Jonas</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/bd.css">
+  <script src="/assets/config.js"></script>
+  <script defer src="/assets/main.js"></script>
+  <script defer src="/assets/bd-paiement.js"></script>
+</head>
+<body data-page="paiement-bd-retour">
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="/">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="/bd-personnelle.html">BD personnelle</a><a href="/contact.html">Contact</a></div></div></nav>
+<main>
+  <section class="bdq-head"><div class="container" style="max-width:760px"><div class="kicker">BD personnelle</div><h1>Confirmation du paiement</h1></div></section>
+  <section class="bdq-wrap"><div class="container">
+    <p class="bdq-nojs" id="bdq-nojs">Cette page a besoin de JavaScript. Si votre navigateur le bloque, écrivez à <a href="mailto:hello@younousjonas.com">hello@younousjonas.com</a>.</p>
+    <div id="bdp-attente"><div class="bdq-q"><p class="bdq-title">Nous attendons la confirmation de votre paiement…</p><p class="bdq-hint" id="bdp-attente-texte">Cela prend en général quelques secondes. Ne fermez pas cette page.</p></div></div>
+    <div id="bdp-inconnu" hidden><div class="bdq-q"><p class="bdq-title">Nous ne retrouvons pas ce paiement.</p><p class="bdq-hint">Si un montant a été débité, écrivez à <a href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> avec la date du paiement.</p></div></div>
+    <div id="bdp-confirme" hidden>
+      <div class="bdq-done" style="display:block">
+        <h2>Paiement confirmé. Merci <span id="bdp-c-prenom"></span>.</h2>
+        <p><strong id="bdp-c-offre"></strong> · <span id="bdp-c-montant"></span></p>
+        <p>Référence : <span class="ref" id="bdp-c-ref"></span></p>
+        <p id="bdp-c-etape"></p>
+        <p id="bdp-c-lien">Votre reçu vous est envoyé par Stripe.</p>
+        <div class="actions" style="justify-content:center" id="bdp-c-acces" hidden><a class="btn" href="/mon-album">Ouvrir mon questionnaire</a></div>
+        <p class="bdq-notice" id="bdp-c-sans-acces" hidden>Votre lien personnel vers le questionnaire vous est transmis par Younous. Vous pouvez aussi ouvrir <a href="/mon-album">votre espace</a> et demander un lien avec l’adresse de votre commande.</p>
+      </div>
+    </div>
+  </div></section>
+</main>
+<footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> · <a href="/mentions-legales.html">Mentions légales</a> · <a href="/confidentialite.html">Confidentialité</a></div></div></footer>
+</body>
+</html>

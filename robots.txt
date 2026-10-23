@@ -3,5 +3,9 @@ Allow: /
 # Page cachée (préparation parcours) : accessible par lien direct, jamais indexée.
 # Couvre /feuille-de-jugement et /feuille-de-jugement.html (correspondance par préfixe).
 Disallow: /feuille-de-jugement
+# Espace privé et paiement des albums BD.
+Disallow: /mon-album
+Disallow: /paiement-bd
+Disallow: /demande-bd
 
 Sitemap: https://www.younousjonas.com/sitemap.xml

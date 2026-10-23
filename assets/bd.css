@@ -89,3 +89,14 @@
 body.bdq-sent .bdq-form,body.bdq-sent .bdq-progress,body.bdq-sent .bdq-draft{display:none !important}
 body.bdq-sent .bdq-done{display:block}
 @media(max-width:520px){.bdq-q{padding:16px 14px}.bdq-block{padding:12px}.bdq-progress{top:66px}}
+
+/* ---------- Paiement intégré ---------- */
+.bdp-summary{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:20px;padding:18px 20px;margin:0 0 18px}
+.bdp-summary .label{display:block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:6px}
+.bdp-summary .formule-fixed{font-size:1.02rem;font-weight:750;letter-spacing:-.01em}
+.bdp-summary .price{font-size:1.8rem;font-weight:800;letter-spacing:-.03em;white-space:nowrap}
+#bdp-checkout{margin:12px 0 18px;min-height:40px}
+
+/* L'attribut hidden l'emporte toujours dans ces pages (formulaire après envoi, états de l'espace privé). */
+.bdq-wrap [hidden]{display:none !important}
+.bdq-field > span.bdq-hint{font-weight:400;color:var(--muted)}

@@ -11,3 +11,21 @@
 /mako /coaching 301!
 /mako/ /coaching 301!
 /mako.html /coaching 301!
+
+# BD personnelle (23-10-2026) : les anciens questionnaires publics sont retirés.
+# Leurs adresses mènent à la demande d'intérêt courte ; les questionnaires complets
+# ne s'ouvrent plus que dans l'espace privé, après paiement constaté.
+/demande-mon-parcours-en-bd /demande-bd.html?offre=297 301!
+/demande-mon-parcours-en-bd.html /demande-bd.html?offre=297 301!
+/demande-mon-histoire-en-bd /demande-bd.html?offre=891 301!
+/demande-mon-histoire-en-bd.html /demande-bd.html?offre=891 301!
+/assets/bd-questionnaire.js /404 404!
+/mon-album /mon-album.html 200
+/paiement-bd /paiement-bd.html 200
+/paiement-bd-retour /paiement-bd-retour.html 200
+# Fichiers du dépôt jamais servis : sources des fonctions Edge, dépendances, tests.
+/netlify/* /404 404!
+/node_modules/* /404 404!
+/package.json /404 404!
+/package-lock.json /404 404!
+/tests/* /404 404!

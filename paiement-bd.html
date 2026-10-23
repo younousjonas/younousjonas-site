@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paiement de votre album — BD personnelle - Younous Jonas</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/bd.css">
+  <script src="/assets/config.js"></script>
+  <script defer src="/assets/main.js"></script>
+  <script defer src="/assets/bd-paiement.js"></script>
+</head>
+<body data-page="paiement-bd">
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="/">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="/bd-personnelle.html">BD personnelle</a><a href="/contact.html">Contact</a></div></div></nav>
+<main>
+  <section class="bdq-head"><div class="container" style="max-width:760px"><div class="kicker">BD personnelle</div><h1>Paiement de votre album</h1></div></section>
+  <section class="bdq-wrap"><div class="container">
+    <p class="bdq-nojs" id="bdq-nojs">Cette page a besoin de JavaScript. Si votre navigateur le bloque, écrivez à <a href="mailto:hello@younousjonas.com">hello@younousjonas.com</a>.</p>
+    <div id="bdp-chargement"><p class="bdq-notice">Préparation du paiement…</p></div>
+    <div id="bdp-invalide" hidden><div class="bdq-q"><p class="bdq-title">Ce lien de paiement n’est pas valable ou a expiré.</p><p class="bdq-hint">Demandez un nouveau lien à Younous : <a href="mailto:hello@younousjonas.com">hello@younousjonas.com</a>.</p></div></div>
+    <div id="bdp-deja" hidden><div class="bdq-q"><p class="bdq-title">Cette commande est déjà réglée.</p><p class="bdq-hint">Votre lien personnel vers le questionnaire vous a été transmis. S’il ne fonctionne plus, ouvrez <a href="/mon-album">votre espace</a> pour en demander un nouveau.</p></div></div>
+    <div id="bdp-resume" hidden>
+      <div class="summary bdp-summary">
+        <div><span class="label">Votre album</span><span class="formule-fixed" id="bdp-libelle"></span><br><span class="bdq-hint">Référence <span id="bdp-ref"></span> · pour <span id="bdp-prenom"></span></span></div>
+        <span class="price" id="bdp-montant"></span>
+      </div>
+      <p class="bdq-notice" id="bdp-indisponible" hidden>Le paiement en ligne n’est pas encore ouvert. Younous vous recontacte personnellement ; aucun montant ne vous est demandé pour l’instant.</p>
+      <p class="bdq-notice">Paiement sécurisé par Stripe, sans quitter le site, pour Run Coaching. Le montant est dû en une fois ; selon votre éligibilité, Klarna ou PayPal peuvent vous proposer leurs propres solutions de financement, à leurs conditions. Votre reçu vous est envoyé par Stripe. Une fois le paiement constaté, votre questionnaire personnel s’ouvre.</p>
+      <p class="bdq-notice">Aucun remboursement n’est prévu à la demande, sous réserve des droits que la loi vous garantit.</p>
+      <div id="bdp-checkout"></div>
+      <p class="bdq-status" id="bdp-status" role="status" aria-live="polite"></p>
+    </div>
+  </div></section>
+</main>
+<footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> · <a href="/mentions-legales.html">Mentions légales</a> · <a href="/confidentialite.html">Confidentialité</a></div></div></footer>
+</body>
+</html>
