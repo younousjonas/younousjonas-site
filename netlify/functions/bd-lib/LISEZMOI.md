@@ -19,7 +19,7 @@ Fichier interne au dépôt. Il n'est pas servi par le site : `_redirects` renvoi
    - Une confirmation à l'acheteur est mise en file. Une anomalie déclenche une alerte en file.
 5. **Questionnaire personnel** (`/mon-album#cle=…`, fonctions `bd-acces` et `bd-questionnaire`).
    - Le lien est un jeton de 256 bits, dont seule l'empreinte SHA-256 est stockée. Il vaut 30 jours, pour 10 ouvertures au plus, et un seul lien est actif à la fois. Les ouvertures sont comptées par écriture conditionnelle : même simultanées, jamais plus de 10.
-   - Le lien d'un message de la file est dérivé de l'identifiant du message (HMAC-SHA256 avec `BD_LINK_SECRET`). Une reprise reproduit donc le même lien, sans le remettre à zéro. Le lien le plus récemment émis reste le seul actif : un message parti après un lien `lien-acces` de l'administration remplace ce dernier.
+   - Le lien d'un message de la file est dérivé de l'identifiant du message (HMAC-SHA256 avec `BD_LINK_SECRET`). Une reprise reproduit donc le même lien, sans le remettre à zéro. Chaque émission voulue prend un rang (`generationLien`) : la confirmation est le rang 1, puis chaque récupération et chaque lien `lien-acces` de l'administration prend le rang suivant. Un message porte le rang de son lien. Un message dont le rang est dépassé est obsolète : repris ou relancé plus tard, il ne réactive jamais son ancien lien et passe à l'état `annule`. Le nouveau lien reste donc valable.
    - Un accès révoqué n'est jamais rouvert par la file : le message passe à l'état `annule`.
    - L'ouverture donne un cookie `__Host-bd_sess` (HttpOnly, Secure, SameSite=Strict, 12 h).
    - Le brouillon est enregistré côté serveur, par commande ; les réponses sont vérifiées côté serveur ; un seul envoi aboutit (création « si nouveau » des réponses).
@@ -27,6 +27,7 @@ Fichier interne au dépôt. Il n'est pas servi par le site : `_redirects` renvoi
 6. **File d'envoi** (`bd-outbox`, planifiée toutes les 15 min).
    - L'identifiant d'un message est tiré de sa clé de dédoublonnage et créé en une seule écriture « si nouveau ».
    - Avant l'envoi, le message est réservé (`en_cours`, verrou de 5 min) : deux traitements simultanés n'envoient qu'une fois ; un verrou expiré se reprend.
+   - La fin d'un traitement n'écrit que s'il détient encore le verrou (`en_cours` et `verrou.par` = lui). Un traitement lent qui a dépassé son bail n'écrase ni le résultat ni le verrou de celui qui a repris le message (`bailsPerdus` au bilan).
    - La clé d'idempotence transmise au fournisseur est l'identifiant du message, stable d'une reprise à l'autre.
    - 6 essais (1 min, 5 min, 15 min, 1 h, 4 h, 12 h), puis l'état `echec`, visible.
    - Aucun lien en clair n'est stocké.
@@ -82,7 +83,7 @@ curl -s … -d '{"action":"relancer-envoi","id":"MSG-…"}'
 
 `stripe-webhook.js` (même compte Stripe) ignore désormais tout événement dont l'objet porte `metadata.bd_commande` ou la description `BD personnelle — …`. Les paiements des albums ne partent donc ni vers Make ni vers Brevo. Ses autres paiements sont relayés comme avant (test 11).
 
-**Limite connue, à résoudre avant le live.** Un événement `charge.dispute.created` ne porte ni métadonnées ni description. Un litige sur un paiement d'album serait donc encore relayé vers Make, sauf à interroger l'API Stripe dans ce webhook.
+**Litiges.** Un événement `charge.dispute.*` ne porte ni métadonnées ni description. Le webhook lit donc, en lecture seule (GET), la charge puis le paiement liés au litige, et ignore le litige s'ils portent `bd_commande` ou la description BD. Clé utilisée : `STRIPE_LITIGES_READ_KEY` (clé restreinte en lecture, recommandée) si elle est posée, sinon `STRIPE_SECRET_KEY` du même compte. Si la lecture échoue ou si aucune clé n'est disponible, le webhook répond 500 sans relayer : Stripe renvoie l'événement plus tard. Aucun litige n'est perdu, aucun litige d’album n’est relayé (test « litige d’un paiement BD »).
 
 ## Anciens formulaires Netlify (`biographies-parcours-297`, `biographies-histoire-891`)
 
@@ -98,6 +99,6 @@ curl -s … -d '{"action":"relancer-envoi","id":"MSG-…"}'
 
 ## Tests
 
-- `node --test tests/bd.test.mjs` : 36 tests serveur, dont concurrence (magasin à latence) et pannes injectées (entre « payée » et la mise en file, sur le marqueur d'événement, à la confirmation), deux traitements de file simultanés, envoi ambigu, verrou interrompu.
+- `node --test tests/bd.test.mjs` : 41 tests serveur, dont concurrence (magasin à latence) et pannes injectées (entre « payée » et la mise en file, sur le marqueur d'événement, à la confirmation), deux traitements de file simultanés, envoi ambigu, verrou interrompu.
 - `CHROMIUM_PATH=… PLAYWRIGHT_GLOBAL=$(npm root -g) node tests/e2e/e2e.mjs <dossier des captures, hors du dépôt>` : 78 vérifications navigateur, sur un serveur local avec les vraies fonctions, Stripe simulé, sans réseau.
 - Un vrai test Stripe est **bloqué** tant que les clés de test `BD_*` n'existent pas.

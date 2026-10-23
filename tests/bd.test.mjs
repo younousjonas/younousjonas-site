@@ -735,3 +735,138 @@ test('file (trois défauts relevés par Codex sur a5262a9) : panne à l’insert
   assert.equal(m.d.envoyeur.envoyes.length, 1);
   assert.equal(bilans[0].envoyes + bilans[1].envoyes, 1);
 });
+
+test('file : ouvrier A lent qui dépasse son bail, B reprend et envoie ; l’échec (ou le succès) tardif de A n’écrase rien', async () => {
+  for(const issueA of ['echec', 'succes']){
+    const m = monde();
+    await commandePayee(m);
+    const captureB = envoyeurCapture();
+    const lentA = { nom: 'lent', disponible: true, async envoyer(){
+      m.avancer(VERROU_MS + 1);                                   // A dépasse son bail
+      await executerFile({ ...m.d, envoyeur: captureB, travailleur: 'B' });
+      if(issueA === 'echec') throw new Error('delai_depasse');
+      return { id: 'fournisseur-A' };
+    } };
+    const bilanA = await executerFile({ ...m.d, envoyeur: lentA, travailleur: 'A' });
+    assert.equal(captureB.envoyes.length, 1, issueA);
+    const [it] = await fileDe(m);
+    assert.equal(it.statut, 'envoye', issueA + ' : le résultat de B reste');
+    assert.equal(it.tentatives, 0, issueA);
+    assert.equal(it.idFournisseur, 'cap-1', issueA + ' : identifiant fournisseur de B conservé');
+    assert.equal(it.verrou, null, issueA);
+    assert.equal(bilanA.bailsPerdus, 1, issueA);
+    assert.equal(captureB.envoyes[0].idempotencyKey, it.id);
+  }
+});
+
+test('liens : une ancienne confirmation reprise après une récupération ou un lien admin est annulée et n’invalide pas le nouveau lien', async () => {
+  // a) confirmation en échec (à reprendre), puis récupération : la confirmation reprise est annulée
+  const essais = [];
+  let panne = true;
+  const fournisseur = { nom: 'f', disponible: true, async envoyer(msg){ essais.push(msg); if(panne) throw new Error('refus_temporaire'); return { id: 'f-' + essais.length }; } };
+  const m = monde({ envoyeur: fournisseur });
+  const commande = await commandePayee(m);
+  await executerFile(m.d);                                        // confirmation : échec, à reprendre
+  const jetonConfirmation = essais[0].texte.match(/#cle=([A-Za-z0-9_-]{43})/)[1];
+  await handlerAcces(m.d)(req('POST', { action: 'recuperer', email: INTERET_OK.email }));
+  panne = false; m.avancer(2 * 60e3);
+  await executerFile(m.d);
+  const file = await fileDe(m);
+  assert.equal(file.find((x) => x.type === 'confirmation').statut, 'annule', 'confirmation obsolète annulée');
+  const lien = file.find((x) => x.type === 'nouveau-lien');
+  assert.equal(lien.statut, 'envoye'); assert.equal(lien.generation, 2);
+  const jetonRecup = essais.at(-1).texte.match(/#cle=([A-Za-z0-9_-]{43})/)[1];
+  assert.notEqual(jetonRecup, jetonConfirmation);
+  assert.equal((await session(m, jetonRecup)).r.status, 200, 'lien de récupération valable');
+  assert.equal((await session(m, jetonConfirmation)).r.status, 404, 'ancien lien inactif');
+  // b) lien admin, puis relance manuelle de l'ancien message de récupération : annulé, lien admin intact
+  const admin = await corpsDe(await handlerAdmin(m.d)(adminReq({ action: 'lien-acces', commande })));
+  const jetonAdmin = admin.lienAcces.split('#cle=')[1];
+  await handlerAdmin(m.d)(adminReq({ action: 'relancer-envoi', id: lien.id }));
+  const nbEssais = essais.length;
+  await executerFile(m.d);
+  assert.equal(essais.length, nbEssais, 'aucun envoi de l’ancien message');
+  assert.equal((await fileDe(m)).find((x) => x.id === lien.id).statut, 'annule');
+  assert.equal((await session(m, jetonAdmin)).r.status, 200, 'lien admin toujours valable');
+  assert.equal((await session(m, jetonRecup)).r.status, 404);
+  const c = await m.d.store.getJSON('commandes/' + commande);
+  assert.equal(c.generationLien, 3); assert.equal(c.acces.source, 'admin');
+});
+
+test('webhook coaching : litige d’un paiement BD résolu par lecture Stripe (charge puis paiement) et non relayé ; coaching relayé ; doute → 500', async () => {
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const wh = require('../netlify/functions/stripe-webhook.js');
+  const sauve = { ...process.env }; const fetchOrig = globalThis.fetch;
+  const relais = []; const lectures = [];
+  let stripeEnPanne = false;
+  const objets = {
+    'charges/ch_bdLITIGE01': { id: 'ch_bdLITIGE01', payment_intent: 'pi_bdLITIGE01', metadata: {}, description: null },
+    'payment_intents/pi_bdLITIGE01': { id: 'pi_bdLITIGE01', metadata: { bd_commande: 'CMD-297-20261023-AAAAAA' } },
+    'charges/ch_coachLIT01': { id: 'ch_coachLIT01', payment_intent: 'pi_coachLIT01', metadata: {}, description: 'Coaching — Séance à l’unité' },
+    'payment_intents/pi_coachLIT01': { id: 'pi_coachLIT01', metadata: { formule: 'unite' } },
+  };
+  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_coaching_test';
+  process.env.MAKE_WEBHOOK_URL_TRANSACTION = 'https://make.example.invalid/hook';
+  process.env.STRIPE_SECRET_KEY = 'sk_test_coaching_factice';
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    if(u.startsWith('https://api.stripe.com/v1/')){
+      lectures.push({ chemin: u.slice(26), methode: init.method, auth: init.headers.Authorization });
+      if(stripeEnPanne) return new Response('{}', { status: 503 });
+      const o = objets[u.slice(26)];
+      return o ? new Response(JSON.stringify(o), { status: 200 }) : new Response('{}', { status: 404 });
+    }
+    relais.push({ url: u, corps: init.body }); return new Response('ok', { status: 200 });
+  };
+  const envoyer = async (ev) => {
+    const brut = JSON.stringify(ev);
+    return wh.handler({ httpMethod: 'POST', headers: { 'stripe-signature': signerPourTest(brut, 'whsec_coaching_test', Math.floor(Date.now() / 1000)) }, body: brut, isBase64Encoded: false });
+  };
+  const litige = (id, charge, pi = null) => ({ id, type: 'charge.dispute.created', data: { object: { id: 'dp_' + id, object: 'dispute', charge, payment_intent: pi, amount: 29700, metadata: {} } } });
+  try{
+    const r1 = await envoyer(litige('evt_l1', 'ch_bdLITIGE01'));
+    assert.equal(r1.statusCode, 200); assert.equal(r1.body, 'Ignoré (BD personnelle).');
+    assert.deepEqual(lectures.map((l) => l.chemin), ['charges/ch_bdLITIGE01', 'payment_intents/pi_bdLITIGE01']);
+    assert.ok(lectures.every((l) => l.methode === 'GET' && l.auth === 'Bearer sk_test_coaching_factice'), 'lecture seule, clé du compte');
+    assert.equal(relais.length, 0, 'litige BD jamais relayé vers Make');
+    const r2 = await envoyer(litige('evt_l2', 'ch_coachLIT01'));
+    assert.equal(r2.body, 'OK'); assert.equal(relais.length, 1, 'litige coaching relayé');
+    stripeEnPanne = true;
+    const r3 = await envoyer(litige('evt_l3', 'ch_bdLITIGE01'));
+    assert.equal(r3.statusCode, 500, 'Stripe indisponible : non relayé, Stripe réessaiera');
+    stripeEnPanne = false;
+    delete process.env.STRIPE_SECRET_KEY;
+    const r4 = await envoyer(litige('evt_l4', 'ch_coachLIT01'));
+    assert.equal(r4.statusCode, 500, 'sans clé de lecture : on ne conclut pas');
+    const r5 = await envoyer(litige('evt_l5', 'ch_x', null));
+    assert.equal(r5.statusCode, 500);
+    const r6 = await envoyer({ ...litige('evt_l6', null), data: { object: { id: 'dp_6', charge: { id: 'ch_exp', description: 'BD personnelle — CMD-297-20261023-AAAAAA' } } } });
+    assert.equal(r6.body, 'Ignoré (BD personnelle).', 'charge déjà incluse dans l’événement');
+    assert.equal(relais.length, 1);
+  } finally {
+    process.env = sauve; globalThis.fetch = fetchOrig;
+  }
+});
+
+test('file : A termine pendant que B, qui a repris le message, envoie encore → le verrou de B reste intact', async () => {
+  const m = monde();
+  await commandePayee(m);
+  let ouvrir; const porte = new Promise((r) => { ouvrir = r; });
+  const captureB = envoyeurCapture();
+  const lentB = { nom: 'lentB', disponible: true, async envoyer(msg){ await porte; return captureB.envoyer(msg); } };
+  let travailB;
+  const lentA = { nom: 'lentA', disponible: true, async envoyer(){
+    m.avancer(VERROU_MS + 1);
+    travailB = executerFile({ ...m.d, envoyeur: lentB, travailleur: 'B' });
+    for(let i = 0; i < 200; i++){ const [x] = await fileDe(m); if(x.verrou && x.verrou.par === 'B') break; await new Promise((r) => setTimeout(r, 1)); }
+    throw new Error('delai_depasse');
+  } };
+  await executerFile({ ...m.d, envoyeur: lentA, travailleur: 'A' });
+  let [it] = await fileDe(m);
+  assert.equal(it.statut, 'en_cours'); assert.equal(it.verrou.par, 'B', 'A n’a pas libéré le verrou de B');
+  assert.equal(it.tentatives, 0, 'A n’a pas compté d’échec');
+  ouvrir(); await travailB;
+  [it] = await fileDe(m);
+  assert.equal(it.statut, 'envoye'); assert.equal(captureB.envoyes.length, 1);
+});

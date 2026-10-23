@@ -23,10 +23,11 @@ const ENVOYABLES = ['a_envoyer', 'en_attente_fournisseur'];
 
 export function idMessage(type, dedup){ return `MSG-${type}-${hacher(dedup).slice(0, 20)}`; }
 
-export async function mettreEnFile(store, { type, dedup, commandeId = null, destinataire, donnees = {} }, maintenant){
+// generation : rang d'émission du lien personnel que porte le message (voir handlers.mjs).
+export async function mettreEnFile(store, { type, dedup, commandeId = null, destinataire, donnees = {}, generation = null }, maintenant){
   const id = idMessage(type, dedup);
   const cree = await creerSiNouveau(store, 'ob/' + id, {
-    id, type, dedup, commandeId, destinataire, donnees,
+    id, type, dedup, commandeId, destinataire, donnees, generation,
     statut: 'a_envoyer', tentatives: 0, prochainEssai: maintenant, derniereErreur: null, verrou: null,
     creeLe: new Date(maintenant).toISOString(), envoyeLe: null,
   });
@@ -48,7 +49,7 @@ export class ErreurDefinitive extends Error {}
 // pour un même message, il doit produire le même contenu à chaque reprise.
 export async function traiterFile(store, { envoyeur, composer, maintenant, journal = () => {}, travailleur = crypto.randomUUID() }){
   const cles = await store.list('ob/');
-  const bilan = { envoyes: 0, attente: 0, echecs: 0, annules: 0 };
+  const bilan = { envoyes: 0, attente: 0, echecs: 0, annules: 0, bailsPerdus: 0 };
   for(const k of cles){
     if(!envoyeur.disponible){
       const r = await maj(store, k, (it) => {
@@ -80,8 +81,10 @@ export async function traiterFile(store, { envoyeur, composer, maintenant, journ
     }catch(e){
       resultat = { ok: false, definitif: e instanceof ErreurDefinitive, erreur: String(e && e.message || e).slice(0, 200) };
     }
-    const { valeur: fin } = await maj(store, k, (x) => {
-      if(!x) return undefined;
+    // Fin conditionnée au bail : si ce traitement a dépassé son verrou et qu'un autre a repris
+    // le message, il n'écrase ni le résultat ni le verrou de ce dernier.
+    const { valeur: fin, ecrit } = await maj(store, k, (x) => {
+      if(!x || x.statut !== 'en_cours' || !x.verrou || x.verrou.par !== travailleur) return undefined;
       x.verrou = null;
       if(resultat.ok){
         x.statut = 'envoye'; x.envoyeLe = new Date(maintenant).toISOString(); x.idFournisseur = resultat.idFournisseur; x.derniereErreur = null;
@@ -94,6 +97,7 @@ export async function traiterFile(store, { envoyeur, composer, maintenant, journ
       else { x.statut = 'a_envoyer'; x.prochainEssai = maintenant + DELAIS[x.tentatives - 1]; }
       return x;
     });
+    if(!ecrit){ bilan.bailsPerdus += 1; journal('outbox_bail_perdu', it.id); continue; }
     if(fin.statut === 'envoye') bilan.envoyes += 1;
     else if(fin.statut === 'echec'){ bilan.echecs += 1; journal('outbox_echec', it.id); }
     else if(fin.statut === 'annule'){ bilan.annules += 1; journal('outbox_annule', it.id); }

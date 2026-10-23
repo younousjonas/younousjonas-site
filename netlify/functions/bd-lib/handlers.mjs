@@ -64,9 +64,15 @@ async function commandeParJetonPaiement(store, jeton, maintenant){
 }
 
 // Lien personnel d'accès au questionnaire : un seul lien valable à la fois (le précédent est révoqué).
-// source : « admin » (lien affiché une fois) ou l'identifiant du message qui le porte.
+//
+// Génération : chaque nouvelle émission voulue (confirmation = 1, puis chaque récupération et
+// chaque lien de l'administration) prend le rang suivant, c.generationLien. Un message porte
+// le rang de son lien. Un message dont le rang est dépassé est obsolète : envoyé ou repris
+// plus tard, il ne réactive jamais son ancien lien et il est annulé.
+//
+// source : { admin: true } (lien affiché une fois, rang suivant pris ici) ou { message, generation }.
 // Un même jeton déjà actif n'est pas réémis : ses utilisations ne repartent pas de zéro.
-// Renvoie true si le lien est actif à l'issue de l'appel.
+// Renvoie true si le lien est actif à l'issue de l'appel, sinon le motif du refus.
 async function activerJetonAcces(store, id, jeton, maintenant, source){
   const h = hacher(jeton);
   await creerSiNouveau(store, 'ja/' + h, { commande: id });
@@ -74,11 +80,17 @@ async function activerJetonAcces(store, id, jeton, maintenant, source){
   const r = await majCommande(store, id, (c) => {
     ancien = null; refus = null;
     if(!payee(c)){ refus = 'commande_non_payee'; return undefined; }
-    if(c.acces && c.acces.revoque && source !== 'admin'){ refus = 'acces_revoque'; return undefined; }
-    if(c.acces && c.acces.hash === h && !c.acces.revoque) return undefined;     // déjà actif
+    const courante = c.generationLien || 0;
+    if(!source.admin){
+      if(c.acces && c.acces.revoque){ refus = 'acces_revoque'; return undefined; }
+      if((source.generation || 0) < courante){ refus = 'message_obsolete'; return undefined; }
+      if(c.acces && c.acces.hash === h) return undefined;     // déjà actif
+    }
+    const generation = source.admin ? courante + 1 : Math.max(courante, source.generation);
     ancien = c.acces && c.acces.hash;
-    c.acces = { hash: h, expire: maintenant + DUREES.lienAcces, utilisations: 0, max: UTILISATIONS_MAX_LIEN, revoque: false, emisLe: ISO(maintenant), source };
-    trace(c, maintenant, 'lien_acces_emis', { source });
+    c.generationLien = generation;
+    c.acces = { hash: h, expire: maintenant + DUREES.lienAcces, utilisations: 0, max: UTILISATIONS_MAX_LIEN, revoque: false, emisLe: ISO(maintenant), source: source.admin ? 'admin' : source.message, generation };
+    trace(c, maintenant, 'lien_acces_emis', { source: c.acces.source, generation });
     return c;
   });
   if(refus) return refus;
@@ -137,8 +149,8 @@ export function fabriqueComposer(store, cfg, maintenant){
   return async (item) => {
     if(item.type === 'alerte') return composerMessage(item, null, null, cfg);
     const jeton = jetonDerive(cfg.secretLien, 'acces:' + item.id);
-    const etat = await activerJetonAcces(store, item.commandeId, jeton, maintenant, item.id);
-    if(etat === 'acces_revoque') throw new ErreurDefinitive('acces_revoque');
+    const etat = await activerJetonAcces(store, item.commandeId, jeton, maintenant, { message: item.id, generation: item.generation || 0 });
+    if(etat === 'acces_revoque' || etat === 'message_obsolete') throw new ErreurDefinitive(etat);
     if(etat !== true) throw new Error(etat);
     const c = await lireCommande(store, item.commandeId);
     return composerMessage(item, c, `${cfg.site}/mon-album#cle=${jeton}`, cfg);
@@ -231,7 +243,7 @@ export function handlerAdmin(d){
         const c = await lireCommande(s, nettoyer(corps.commande, 80));
         if(!payee(c)) return json(409, { erreur: 'commande_non_payee' });
         const jetonA = nouveauJeton();
-        const etat = await activerJetonAcces(s, c.id, jetonA, maintenant, 'admin');
+        const etat = await activerJetonAcces(s, c.id, jetonA, maintenant, { admin: true });
         if(etat !== true) return json(409, { erreur: etat });
         return json(200, { lienAcces: `${d.cfg.site}/mon-album#cle=${jetonA}` });
       }
@@ -395,13 +407,14 @@ export function handlerWebhook(d){
       issue = 'paye';
       x.statut = 'payee';
       x.paiement = { session: cs.id, paymentIntent: cs.payment_intent || null, montant: cs.amount_total, devise: cs.currency, payeLe: ISO(maintenant), evenement: ev.id };
+      x.generationLien = Math.max(x.generationLien || 0, 1);    // le lien de la confirmation est le rang 1
       trace(x, maintenant, 'paiement_constate', { evt: ev.id });
       return x;
     });
     if(issue === 'double_paiement') return anomalie(['double paiement'], 'Double paiement', `Commande ${c.id} déjà réglée ; nouvelle session ${cs.id}. Remboursement à examiner.`, 'double:' + cs.id, 'double_paiement');
     // Payée (maintenant ou lors d'un passage interrompu) : la confirmation est (re)mise en file ;
     // le dédoublonnage garantit un seul message.
-    await mettreEnFile(s, { type: 'confirmation', dedup: 'confirmation:' + c.id, commandeId: c.id, destinataire: 'acheteur' }, maintenant);
+    await mettreEnFile(s, { type: 'confirmation', dedup: 'confirmation:' + c.id, commandeId: c.id, destinataire: 'acheteur', generation: 1 }, maintenant);
     const pj = r.valeur && r.valeur.paiementJeton;
     if(pj && pj.hash){
       await majCommande(s, c.id, (x) => (x.paiementJeton ? { ...x, paiementJeton: null } : undefined));
@@ -447,8 +460,15 @@ export function handlerAcces(d){
       if(!emailValide(email) || !(await limiter(s, 'recup-email', email, 3, 3600e3, maintenant))) return reponse;
       const idx = await s.getJSON('idx/email/' + hacher(email));
       for(const id of (idx && idx.commandes) || []){
-        const c = await lireCommande(s, id);
-        if(payee(c) && !(c.acces && c.acces.revoque)) await mettreEnFile(s, { type: 'nouveau-lien', dedup: `lien:${c.id}:${Math.floor(maintenant / 3600e3)}`, commandeId: c.id, destinataire: 'acheteur' }, maintenant);
+        // Rang suivant réservé d'abord ; le message de ce rang rend obsolètes tous les précédents.
+        // Une panne entre les deux laisse seulement un rang sans message : une nouvelle demande le corrige.
+        const r = await majCommande(s, id, (c) => {
+          if(!payee(c) || (c.acces && c.acces.revoque)) return undefined;
+          c.generationLien = (c.generationLien || 0) + 1; trace(c, maintenant, 'lien_demande', { generation: c.generationLien }); return c;
+        });
+        if(!r.ecrit) continue;
+        const g = r.valeur.generationLien;
+        await mettreEnFile(s, { type: 'nouveau-lien', dedup: `lien:${id}:${g}`, commandeId: id, destinataire: 'acheteur', generation: g }, maintenant);
       }
       return reponse;
     }

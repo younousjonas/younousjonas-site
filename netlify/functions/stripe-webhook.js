@@ -16,6 +16,9 @@
  *   STRIPE_WEBHOOK_SECRET          whsec_… (généré à la création de l'endpoint Stripe)
  *   MAKE_WEBHOOK_URL_TRANSACTION   URL du webhook Make (scénario Stripe natif Run Coaching)
  *   MAKE_WEBHOOK_SECRET            secret partagé, passé en header X-Make-Secret
+ *   STRIPE_SECRET_KEY              clé du même compte, lue seulement pour les litiges
+ *                                  (lecture de la charge et du paiement, voir litigeBD) ;
+ *                                  STRIPE_LITIGES_READ_KEY (clé restreinte en lecture) prime si posée.
  */
 
 const crypto = require("crypto");
@@ -36,6 +39,43 @@ function estPaiementBD(obj) {
   if (!obj || typeof obj !== "object") return false;
   if (obj.metadata && obj.metadata.bd_commande) return true;
   return typeof obj.description === "string" && obj.description.startsWith("BD personnelle — ");
+}
+
+// Un litige (`charge.dispute.*`) ne porte ni métadonnées ni description : on lit, en
+// lecture seule, la charge puis le paiement auxquels il se rapporte pour savoir s'il
+// concerne un album. Toute impossibilité de conclure lève une erreur : l'événement n'est
+// alors pas relayé et Stripe le renverra (aucun litige perdu, aucun litige BD relayé).
+const ID_CHARGE = /^(ch|py)_[A-Za-z0-9]{6,255}$/;
+const ID_PAIEMENT = /^pi_[A-Za-z0-9]{6,255}$/;
+const idDe = (x) => (typeof x === "string" ? x : x && typeof x.id === "string" ? x.id : null);
+
+async function lireStripe(chemin, cle) {
+  const resp = await fetch("https://api.stripe.com/v1/" + chemin, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${cle}` },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!resp.ok) throw new Error("stripe_" + resp.status);   // jamais la clé ni le corps
+  return resp.json();
+}
+
+async function litigeBD(litige, cle) {
+  if (estPaiementBD(litige) || estPaiementBD(litige.charge) || estPaiementBD(litige.payment_intent)) return true;
+  if (!cle) throw new Error("cle_lecture_absente");
+  let paiement = idDe(litige.payment_intent);
+  const charge = idDe(litige.charge);
+  if (charge) {
+    if (!ID_CHARGE.test(charge)) throw new Error("charge_illisible");
+    const ch = await lireStripe("charges/" + charge, cle);
+    if (estPaiementBD(ch)) return true;
+    paiement = paiement || idDe(ch.payment_intent);
+  }
+  if (paiement) {
+    if (!ID_PAIEMENT.test(paiement)) throw new Error("paiement_illisible");
+    if (estPaiementBD(await lireStripe("payment_intents/" + paiement, cle))) return true;
+  }
+  if (!charge && !paiement) throw new Error("litige_sans_reference");
+  return false;
 }
 
 // Vérifie l'en-tête `Stripe-Signature` (format `t=…,v1=…`) contre le corps brut.
@@ -108,6 +148,18 @@ exports.handler = async (event) => {
   }
 
   const obj = stripeEvent.data?.object || {};
+
+  if (stripeEvent.type.startsWith("charge.dispute.")) {
+    try {
+      if (await litigeBD(obj, process.env.STRIPE_LITIGES_READ_KEY || process.env.STRIPE_SECRET_KEY)) {
+        return { statusCode: 200, body: "Ignoré (BD personnelle)." };
+      }
+    } catch (err) {
+      console.error("Litige non résolu, Stripe réessaiera:", String(err && err.message).slice(0, 60));
+      return { statusCode: 500, body: "Litige non résolu." };
+    }
+  }
+
   const payload = {
     event_id: stripeEvent.id,
     event_type: stripeEvent.type,
@@ -143,3 +195,4 @@ exports.handler = async (event) => {
 };
 
 exports.estPaiementBD = estPaiementBD;
+exports.litigeBD = litigeBD;
