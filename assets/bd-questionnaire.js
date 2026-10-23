@@ -11,6 +11,7 @@
 
   var root, form, draftBar, progressText, progressBar, errorsBox, statusEl;
   var saveTimer = null;
+  var sent = false;
   var storageOk = (function(){ try{ var k='__bdq'; localStorage.setItem(k,'1'); localStorage.removeItem(k); return true; }catch(e){ return false; } })();
 
   /* ---------- petits outils DOM ---------- */
@@ -208,15 +209,19 @@
     return c;
   }
   function scheduleSave(){
-    if(!storageOk || !S.draftKey) return;
+    if(!storageOk || !S.draftKey || sent) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveDraft, 400);
   }
   function saveDraft(){
+    if(sent) return;
     try{
       localStorage.setItem(S.draftKey, JSON.stringify({v:1, at: new Date().toISOString(), counts: repeatCounts(), values: collect()}));
-      showDraftBar('Brouillon gardé sur cet appareil à ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '. Il reste ici jusqu’à l’envoi ; personne d’autre ne le reçoit.');
-    }catch(e){}
+      showDraftBar('Brouillon gardé sur cet appareil à ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '. Il reste dans ce navigateur jusqu’à l’envoi ; il n’est transmis à personne.');
+    }catch(e){
+      // Mémoire pleine ou refusée : on le dit, sans laisser croire à une sauvegarde.
+      showDraftBar('Attention : le brouillon ne peut pas être gardé sur cet appareil. Vos dernières réponses seront perdues si la page se ferme ; pensez à envoyer en une fois.', true);
+    }
   }
   function loadDraft(){
     if(!storageOk || !S.draftKey) return false;
@@ -234,11 +239,16 @@
       return true;
     }catch(e){ return false; }
   }
-  function clearDraft(){ try{ if(S.draftKey) localStorage.removeItem(S.draftKey); }catch(e){} }
-  function showDraftBar(text){
+  function clearDraft(){
+    // Annule une sauvegarde en attente : sinon elle recréerait le brouillon juste après l'effacement.
+    clearTimeout(saveTimer); saveTimer = null;
+    try{ if(S.draftKey) localStorage.removeItem(S.draftKey); }catch(e){}
+  }
+  function showDraftBar(text, warn){
     if(!draftBar) return;
     draftBar.querySelector('span').textContent = text;
     draftBar.classList.add('visible');
+    draftBar.classList.toggle('warn', !!warn);
   }
   function allQuestions(){
     var out = [];
@@ -345,6 +355,23 @@
     return lines.join('\n').trim();
   }
 
+  /* Réponses envoyées : on retire les sous-réponses des thèmes décochés.
+     Elles restent dans le brouillon local, pour le cas où la personne recoche. */
+  function payloadValues(vals){
+    var out = {};
+    var drop = [];
+    allQuestions().forEach(function(q){
+      if(q.type !== 'themes') return;
+      var chosen = vals[q.id] || [];
+      q.themes.forEach(function(t, i){ if(chosen.indexOf(t.label) === -1) drop.push(q.id + '.' + i + '.'); });
+    });
+    Object.keys(vals).forEach(function(k){
+      if(drop.some(function(pfx){ return k.indexOf(pfx) === 0; })) return;
+      out[k] = vals[k];
+    });
+    return out;
+  }
+
   /* ---------- envoi ---------- */
   function reference(){
     var d = new Date();
@@ -366,7 +393,8 @@
   }
   function onSubmit(e){
     e.preventDefault();
-    var vals = collect();
+    clearTimeout(saveTimer);
+    var vals = payloadValues(collect());
     var problems = validate(vals);
     if(problems.length){ showProblems(problems); return; }
     errorsBox.classList.remove('visible');
@@ -398,6 +426,7 @@
     fetch('/', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: body})
       .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); })
       .then(function(){
+        sent = true;
         clearDraft();
         document.querySelectorAll('[data-ref]').forEach(function(n){ n.textContent = ref; });
         var dl = document.querySelector('[data-download]');
@@ -434,7 +463,7 @@
     });
     form.hidden = false;
 
-    if(!storageOk && draftBar){ showDraftBar('Le brouillon ne peut pas être gardé sur cet appareil (navigation privée ?). Pensez à envoyer en une fois.'); draftBar.querySelector('button').hidden = true; }
+    if(!storageOk && draftBar){ showDraftBar('Attention : le brouillon ne peut pas être gardé sur cet appareil (navigation privée ou stockage bloqué). Vos réponses seront perdues si la page se ferme ; pensez à envoyer en une fois.', true); draftBar.querySelector('button').hidden = true; }
     loadDraft();
     if(draftBar){
       draftBar.querySelector('button').addEventListener('click', function(){
