@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Préparer votre album — Mon histoire en BD - Younous Jonas</title>
+  <meta name="description" content="Questionnaire approfondi pour préparer votre album « Mon histoire en BD » : 80 pages de bande dessinée en couleur, une couverture personnalisée et deux entretiens d’une heure.">
+  <!-- Formulaire de demande : utile par lien depuis la page des offres, pas en résultat de recherche. -->
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/bd.css">
+  <script src="/assets/config.js"></script>
+  <script defer src="/assets/main.js"></script>
+</head>
+<body>
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="/">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="/bd-personnelle.html">BD personnelle</a><a href="/livres.html">Livres</a><a href="/contact.html">Contact</a></div><a class="btn mobile-toggle" href="/bd-personnelle.html">Les offres</a></div></nav>
+
+<main>
+  <section class="bdq-head"><div class="container" style="max-width:760px">
+    <div class="kicker">Mon histoire en BD · 891 €</div>
+    <h1>Préparer votre album</h1>
+  </div></section>
+
+  <section class="bdq-wrap"><div class="container">
+    <div class="bdq-intro">
+      <p>Retrouvons les moments qui donnent son fil à votre histoire. Votre album comprendra 80 pages de bande dessinée en couleur et une couverture personnalisée. Deux entretiens individuels d’une heure sont inclus pour approfondir votre récit. Ce questionnaire prépare ces échanges.</p>
+      <p>Vous pouvez le compléter en plusieurs fois, répondre dans l’ordre qui vous convient et laisser des questions ouvertes. Vous n’avez pas besoin de raconter toute votre vie, ni d’aborder un sujet que vous souhaitez garder privé.</p>
+      <p>Temps indicatif : plusieurs séances de 15 à 20 minutes, selon le détail souhaité.</p>
+      <p>Toutes les questions sont facultatives, sauf indication contraire. Pour chaque question, vous pouvez répondre : « Je préfère en parler pendant l’entretien. »</p>
+      <p class="bdq-notice">Vos réponses sont gardées sur cet appareil au fil de la saisie : vous pouvez fermer la page et reprendre plus tard, depuis le même appareil et le même navigateur. Aucun paiement n’est demandé à cette étape. Younous lit votre demande et vous répond personnellement, avec les modalités de règlement.</p>
+    </div>
+
+    <p class="bdq-nojs" id="bdq-nojs">Ce questionnaire a besoin de JavaScript pour s’afficher. Si votre navigateur le bloque, écrivez à <a href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> : Younous vous enverra les questions.</p>
+
+    <div class="bdq-draft" id="bdq-draft" role="status" aria-live="polite"><span></span><button type="button">Effacer le brouillon</button></div>
+    <div class="bdq-progress" aria-live="off"><span id="bdq-progress-text"></span><div class="bar"><span id="bdq-progress-bar"></span></div></div>
+
+    <!-- Formulaire Netlify : seuls les champs cachés ci-dessous sont enregistrés.
+         Attribut « netlify » (et non data-netlify) pour que assets/main.js ne
+         double pas l'envoi : bd-questionnaire.js s'en charge. -->
+    <form class="bdq-form" id="bdq-form" name="biographies-histoire-891" method="POST" netlify netlify-honeypot="bot-field" novalidate hidden>
+      <input type="hidden" name="form-name" value="biographies-histoire-891">
+      <p class="hp"><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
+      <input type="hidden" name="reference">
+      <input type="hidden" name="offre">
+      <input type="hidden" name="version">
+      <input type="hidden" name="prenom">
+      <input type="hidden" name="email">
+      <input type="hidden" name="whatsapp">
+      <input type="hidden" name="accord_reponses">
+      <input type="hidden" name="accord_documents">
+      <input type="hidden" name="accord_discuter">
+      <input type="hidden" name="reponses">
+      <input type="hidden" name="reponses_json">
+      <input type="hidden" name="envoye_le">
+
+      <div id="bdq-root"></div>
+
+      <div class="bdq-errors" id="bdq-errors" tabindex="-1" role="alert"></div>
+      <div class="bdq-actions">
+        <button class="btn" type="submit">Envoyer ma demande</button>
+        <p class="bdq-status" id="bdq-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+
+    <div class="bdq-done" tabindex="-1">
+      <h2>Votre demande est enregistrée.</h2>
+      <p>Référence : <span class="ref" data-ref></span></p>
+      <p>Younous la lit personnellement et vous répond. Aucun paiement n’a été demandé ; la suite vous sera proposée par écrit.</p>
+      <p>Aucun message automatique ne vous est envoyé. Vous pouvez garder une copie de vos réponses sur cet appareil.</p>
+      <div class="actions" style="justify-content:center"><button class="btn secondary" type="button" data-download>Télécharger une copie de mes réponses</button><a class="btn secondary" href="/bd-personnelle.html">Retour aux offres</a></div>
+    </div>
+  </div></section>
+</main>
+
+<footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> · <a href="/mentions-legales.html">Mentions légales</a> · <a href="/confidentialite.html">Confidentialité</a></div></div></footer>
+
+<script>
+/* Texte remis à la personne : questionnaire 08b (pièce du chantier, 23-10-2026).
+   Les indications de fabrication restent dans la pièce 08b, partie B. */
+window.BDQ = {
+  code: '891',
+  offre: 'Mon histoire en BD (891 €)',
+  version: 'Questionnaire 08b — 23-10-2026',
+  draftKey: 'bdq-histoire-891-v1',
+  later: true,
+  nameField: 'q1', emailField: 'contact_email', phoneField: 'contact_whatsapp',
+  sections: [
+    { title: '1. Votre intention', items: [
+      { id:'q1', num:1, type:'text', req:true, later:false, autocomplete:'given-name', label:'Quel prénom ou quel nom souhaitez-vous que nous utilisions dans nos échanges ?', short:'Votre prénom ou votre nom' },
+      { id:'contact_email', type:'text', inputType:'email', req:true, later:false, autocomplete:'email', label:'À quelle adresse électronique Younous peut-il vous répondre ?', short:'Une adresse électronique pour vous répondre' },
+      { id:'contact_whatsapp', type:'text', inputType:'tel', later:false, autocomplete:'tel', label:'Un numéro WhatsApp, si vous préférez ce moyen ?' },
+      { id:'q2', num:2, type:'textarea', req:true, label:'Pourquoi souhaitez-vous raconter votre histoire aujourd’hui ?', hint:'Quelques phrases suffisent.', short:'Pourquoi raconter votre histoire aujourd’hui' },
+      { id:'q3', num:3, type:'multi', opt:'plusieurs réponses possibles', label:'À qui souhaitez-vous la transmettre ?', options:['À moi-même','À mes enfants ou à mes petits-enfants','À ma famille','À quelques proches','Je ne sais pas encore'], other:'Autre' },
+      { id:'q4', num:4, type:'textarea', label:'Que souhaiteriez-vous que ces lecteurs comprennent ou découvrent ?' },
+      { id:'q5', num:5, type:'text', req:true, label:'Quelles périodes de votre vie aimeriez-vous explorer ?', hint:'Des années, des âges ou des étapes suffisent.', alt:'Je préfère que nous les choisissions ensemble.', short:'Les périodes à explorer (ou « à choisir ensemble »)' },
+      { id:'q6', num:6, type:'textarea', label:'Y a-t-il des périodes ou des sujets à laisser de côté ?', hint:'Les nommer suffit.' },
+      { id:'q7', num:7, type:'textarea', label:'Avez-vous déjà une idée du fil de votre histoire ?', hint:'Une question, une image ou quelques mots. Par exemple : trouver sa place, choisir, construire, transmettre, recommencer. Ce ne sont que des exemples.' }
+    ]},
+    { title: '2. Vos repères', items: [
+      { id:'q8', num:8, type:'fields', label:'Quels repères personnels peuvent nous aider ?', hint:'Chaque champ est facultatif. Aucune adresse précise ni date de naissance complète n’est nécessaire.',
+        fields:[ {id:'generation', label:'Année de naissance, ou génération'}, {id:'region', label:'Région d’origine'}, {id:'enfance', label:'Lieux de l’enfance'}, {id:'langues', label:'Langues du quotidien'}, {id:'autre', label:'Autre repère'} ] },
+      { id:'q9', num:9, type:'repeat', unit:'Période', initial:3, max:12, addLabel:'Ajouter une période', label:'Quelles sont les grandes périodes de votre vie ?', hint:'Trois fiches sont proposées. Vous pouvez en ajouter autant que nécessaire.',
+        fields:[ {id:'nom', label:'Le nom que vous donnez à cette période'}, {id:'annees', label:'Les années ou les âges, même approximatifs'}, {id:'lieux', label:'Les lieux'}, {id:'personnes', label:'Les personnes présentes'}, {id:'quotidien', label:'Votre quotidien (études, travail, famille, activités, responsabilités)', kind:'textarea'}, {id:'souhaits', label:'Ce que vous souhaitiez alors', kind:'textarea'}, {id:'occupations', label:'Ce qui vous occupait ou vous préoccupait', kind:'textarea'}, {id:'evenements', label:'Un ou deux événements marquants', kind:'textarea'}, {id:'ouverture', label:'Ce qui a ouvert la période suivante', kind:'textarea'}, {id:'regard', label:'Votre regard d’aujourd’hui sur cette période', kind:'textarea'}, {id:'certitudes', label:'Les repères certains, et ceux qui restent à vérifier', kind:'textarea'} ] },
+      { id:'q10', num:10, type:'textarea', label:'Avez-vous connu des déplacements ou des changements de lieu importants ? Que représentaient-ils pour vous ?' },
+      { id:'q11', num:11, type:'textarea', label:'Une période est-elle difficile à situer dans le temps ? Laquelle ?' }
+    ]},
+    { title: '3. Les personnes', items: [
+      { id:'q12', num:12, type:'repeat', unit:'Personne', initial:1, max:15, addLabel:'Ajouter une personne', label:'Quelles personnes ont compté dans votre histoire ?', hint:'Aucune coordonnée n’est demandée.',
+        fields:[ {id:'qui', label:'Prénom, pseudonyme ou rôle'}, {id:'lien', label:'Votre lien avec elle'}, {id:'periodes', label:'Les périodes où elle est présente'}, {id:'represente', label:'Ce qu’elle représente pour vous', kind:'textarea'}, {id:'scene', label:'Une scène qui montre votre relation', kind:'textarea'}, {id:'nom_album', kind:'radio', label:'Dans l’album, je souhaite :', options:['la nommer','changer son prénom','la rendre non identifiable','en discuter']}, {id:'precautions', label:'Précautions ou limites', kind:'textarea'} ] },
+      { id:'q13', num:13, type:'textarea', label:'Un groupe ou un collectif a-t-il compté pour vous ?', hint:'Une famille, une équipe, une association, une promotion, une communauté, un cercle d’amis.' },
+      { id:'q14', num:14, type:'textarea', label:'Certaines personnes doivent-elles rester non identifiables, ou absentes de l’album ?' }
+    ]},
+    { title: '4. Les moments charnières', items: [
+      { id:'q15', num:15, type:'repeat', unit:'Moment', initial:3, max:5, addLabel:'Ajouter un moment', label:'Quels moments ont infléchi votre histoire ?', hint:'Une décision, une rencontre, un événement subi, une découverte, ou un changement progressif. Trois à cinq fiches sont prévues. Une première réponse partielle suffit, et chaque ligne de la fiche est facultative. Aucune interprétation n’est attendue.',
+        fields:[ {id:'titre', label:'1. Un titre pour ce moment'}, {id:'quand', label:'2. Quand et où ? Une approximation suffit'}, {id:'avant', label:'3. La situation juste avant', kind:'textarea'}, {id:'evenement', label:'4. Ce qui s’est passé, concrètement', kind:'textarea'}, {id:'personnes', label:'5. Les personnes concernées'}, {id:'actions', label:'6. Vos actions, vos choix, vos essais. Il se peut aussi que vous n’ayez pas eu le choix', kind:'textarea'}, {id:'epoque', label:'7. Ce que vous pensiez ou ressentiez à l’époque', kind:'textarea'}, {id:'consequences', label:'8. Ce qui en a découlé', kind:'textarea'}, {id:'ouvert', label:'9. Ce qui n’a pas changé, ou reste ouvert', kind:'textarea'}, {id:'aujourdhui', label:'10. Ce que vous en comprenez aujourd’hui', kind:'textarea'}, {id:'details', label:'11. Des détails qui pourraient se dessiner (un lieu, un objet, un vêtement, un geste)', kind:'textarea'}, {id:'repere', label:'12. Un document ou une photo qui sert de repère'}, {id:'incertitudes', label:'13. Les incertitudes, ou les points à discuter', kind:'textarea'} ] }
+    ]},
+    { title: '5. Les fils de votre vie', items: [
+      { id:'q16', num:16, type:'themes', label:'Quels thèmes souhaitez-vous approfondir ?', hint:'Plusieurs choix possibles. Seuls les thèmes choisis ouvrent leurs questions. Aucun thème sensible n’est obligatoire.',
+        themes:[
+          { label:'A. Famille et transmission', questions:['Qu’avez-vous reçu que vous souhaitez conserver ?','Qu’avez-vous choisi de vivre autrement ?','Quels gestes, objets, récits ou habitudes en témoignent ?'] },
+          { label:'B. Relations', questions:['Quelles rencontres ont élargi votre regard ou votre action ?','Quelle place avez-vous trouvée auprès des autres ?','Quelle scène le montre ?'] },
+          { label:'C. Études, apprentissages et travail', questions:['Quelles en ont été les étapes ?','Qu’avez-vous construit, tenté, quitté ou repris ?','Quelle capacité, ou quelle limite, y avez-vous découverte ?'] },
+          { label:'D. Lieux, cultures et appartenances', questions:['À quoi vous sentez-vous appartenir ?','Avez-vous vécu entre plusieurs milieux, langues ou cultures ?','Quels détails faut-il rendre fidèlement ?'] },
+          { label:'E. Engagements, valeurs et spiritualité', questions:['Lesquels souhaitez-vous évoquer ?','Comment ont-ils évolué ?','Quelles pratiques ou représentations faut-il respecter, ou éviter ?'] },
+          { label:'F. Épreuves et reprises', questions:['Souhaitez-vous évoquer une difficulté ?','Que montrer, et que laisser hors de l’album ?','Qu’est-ce qui a aidé, et qu’est-ce qui reste difficile ?'] },
+          { label:'G. Création, projets et joies', questions:['Qu’avez-vous créé, entrepris ou partagé ?','Quelles joies souhaitez-vous garder ?','Quelle réalisation, même modeste, compte pour vous ?'] },
+          { label:'H. Un autre fil', questions:['Quel thème manque ici ?','Quelle place tient-il dans votre histoire ?'] }
+        ] }
+    ]},
+    { title: '6. Les scènes', items: [
+      { id:'q17', num:17, type:'textarea', label:'Quels lieux faut-il pouvoir reconnaître ?', hint:'Leur aspect, leur ambiance, un détail.' },
+      { id:'q18', num:18, type:'textarea', label:'Quels objets ont compté, et que représentent-ils ?' },
+      { id:'q19', num:19, type:'textarea', label:'Quels gestes, habitudes ou expressions vous caractérisent ?' },
+      { id:'q20', num:20, type:'fields', label:'Une conversation a-t-elle compté ?',
+        fields:[ {id:'sur', label:'Ce qui est sûr de cette conversation', kind:'textarea'}, {id:'mots', label:'Les mots exacts, s’ils sont écrits quelque part (et où)', kind:'textarea'}, {id:'souvenir', label:'Le souvenir général de l’échange', kind:'textarea'} ] },
+      { id:'q21', num:21, type:'textarea', label:'Quels moments ordinaires aimeriez-vous voir dessinés ?', hint:'Un repas, un trajet, une activité, une attente, un silence, le travail.' },
+      { id:'q22', num:22, type:'fields', label:'Une scène indispensable, et une scène à ne pas représenter ?',
+        fields:[ {id:'indispensable', label:'La scène indispensable', kind:'textarea'}, {id:'a_ne_pas', label:'La scène à ne pas représenter', kind:'textarea'} ] }
+    ]},
+    { title: '7. La voix du récit', items: [
+      { id:'q23', num:23, type:'radio', label:'Qui raconte ?', options:['À la première personne (« je »)','Un narrateur extérieur','Je préfère une proposition avant de choisir'] },
+      { id:'q24', num:24, type:'textarea', label:'Quels mots ou expressions faut-il conserver ?', hint:'S’ils sont dans une autre langue : leur sens et, si possible, leur écriture exacte.' },
+      { id:'q25', num:25, type:'multi', opt:'plusieurs réponses possibles', label:'Quel ton souhaitez-vous ?', options:['Chaleureux','Intime','Sobre','Humoristique','Contemplatif','Direct','À proposer'], other:'Autre' },
+      { id:'q26', num:26, type:'textarea', label:'Y a-t-il des récits de votre vie, faits par vous ou par d’autres, que vous souhaitez nuancer ?' },
+      { id:'q27', num:27, type:'textarea', label:'Que souhaitez-vous laisser ouvert ?', hint:'Une question, une relation, un projet, une évolution.' },
+      { id:'q28', num:28, type:'text', label:'Où aimeriez-vous que le récit se termine ?', alt:'Nous pouvons en décider ensemble.' }
+    ]},
+    { title: '8. Les documents et les visuels', items: [
+      { id:'q29', num:29, type:'repeat', unit:'Document', initial:1, max:20, addLabel:'Ajouter un document', label:'Quels documents proposez-vous ?', hint:'Aucun envoi de fichier n’est obligatoire : un nom ou un lien suffit.',
+        fields:[ {id:'nom', label:'Nom ou description'}, {id:'type', kind:'radio', label:'Type :', options:['photo','lettre','carnet','mémoire','échange écrit'], other:'autre'}, {id:'date', label:'Date approximative'}, {id:'auteur', label:'Auteur ou provenance'}, {id:'apport', label:'Ce qu’il apporte au récit', kind:'textarea'}, {id:'lien', label:'Lien ou nom de fichier'}, {id:'usage', kind:'radio', label:'Utilisation :', options:['utilisable pour la préparation','à discuter d’abord','simple repère, à ne pas utiliser']}, {id:'precautions', label:'Précautions', kind:'textarea'} ] },
+      { id:'q30', num:30, type:'textarea', label:'Younous détient-il déjà certains de vos documents ?', hint:'Lesquels, et quels passages ou périodes autorisez-vous ? Inutile de les renvoyer.' },
+      { id:'q31', num:31, type:'radio', label:'Votre personnage dans l’album :', options:['ressemblant','librement inspiré de vous','à décider ensemble'] },
+      { id:'q32', num:32, type:'textarea', label:'Quelles caractéristiques faut-il garder aux âges représentés ?', hint:'Coiffure, silhouette, vêtements, lunettes, posture, ou d’autres détails de votre choix.' },
+      { id:'q33', num:33, type:'textarea', label:'Disposez-vous de photos qui pourraient servir ?', hint:'Une description suffit pour commencer. Si la ressemblance est choisie, le traitement des photos sera convenu avec vous avant tout usage.' },
+      { id:'q34', num:34, type:'textarea', label:'Avez-vous des préférences visuelles, ou des exemples qui vous plaisent ?', hint:'Un texte ou un lien.' }
+    ]},
+    { title: '9. Les limites et la fidélité', items: [
+      { id:'q35', num:35, type:'textarea', label:'Quels sujets doivent rester hors de l’album ?' },
+      { id:'q36', num:36, type:'textarea', label:'Quels sujets préférez-vous aborder d’abord en entretien, avant de décider ?' },
+      { id:'q37', num:37, type:'textarea', label:'Certains événements sont-ils racontés autrement par d’autres personnes ? Cette différence compte-t-elle pour l’album ?' },
+      { id:'q38', num:38, type:'textarea', label:'Quels noms, lieux ou détails faut-il modifier pour protéger une vie privée ?' },
+      { id:'q39', num:39, type:'textarea', label:'Qu’est-ce qui vous ferait dire : « Cette histoire me ressemble » ?' },
+      { id:'q40', num:40, type:'textarea', label:'Qu’est-ce qui vous donnerait le sentiment d’une représentation infidèle ?' }
+    ]},
+    { title: '10. Les entretiens', items: [
+      { id:'q41', num:41, type:'textarea', label:'De quels sujets aimeriez-vous parler au premier entretien ?' },
+      { id:'q42', num:42, type:'textarea', label:'Quels passages préférez-vous raconter de vive voix plutôt qu’à l’écrit ?' },
+      { id:'q43', num:43, type:'textarea', label:'Avez-vous des préférences pour ces entretiens ?', hint:'Le rythme, les pauses, les sujets annoncés à l’avance, des besoins d’accessibilité.' },
+      { id:'q44', num:44, type:'radio', label:'Comment envisagez-vous les deux entretiens ?', options:['Deux entretiens oraux','Je souhaite discuter d’une adaptation de l’un d’eux à l’écrit','Je ne sais pas encore'] },
+      { id:'q45', num:45, type:'textarea', label:'Souhaitez-vous ajouter autre chose avant de commencer ?' }
+    ]},
+    { title: '11. Vos accords', intro:'Chaque case se coche séparément. Aucune n’est cochée d’avance.', items: [
+      { id:'accords', type:'accords', label:'Vos accords', items:[
+        { id:'accord_reponses', req:true, label:'J’autorise l’utilisation de mes réponses pour préparer mon album.', short:'L’accord sur l’utilisation de vos réponses' },
+        { id:'accord_documents', label:'J’autorise l’utilisation des documents que j’ai précisément désignés comme utilisables.' },
+        { id:'accord_discuter', label:'Je souhaite discuter de certains éléments avant leur utilisation :', withText:true }
+      ]}
+    ], after:'<strong>La suite.</strong> Les deux entretiens se préparent à partir de vos réponses. Vous recevez ensuite une proposition narrative : le récit de votre album, en prose, à relire et à valider avant tout dessin.<br><br>Cet accord n’autorise ni publication, ni promotion, ni enregistrement des entretiens, ni utilisation de vos photos dans un outil graphique. Chacun de ces points, s’il est envisagé, fera l’objet d’un accord séparé.<br><br>Vos réponses sont enregistrées dans l’espace privé de l’hébergeur du site et lues par Younous. Votre album se prépare avec l’aide d’outils d’intelligence artificielle (écriture et dessin), sous sa direction. Rien n’est publié ni partagé. Voir la <a href="/confidentialite.html">politique de confidentialité</a>.' }
+  ]
+};
+</script>
+<script defer src="/assets/bd-questionnaire.js"></script>
+</body>
+</html>

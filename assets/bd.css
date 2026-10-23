@@ -1,0 +1,90 @@
+/* Pages « BD personnelle » (offres 297 € et 891 €, questionnaires).
+   Chargée par ces seules pages : aucun effet sur le reste du site.
+   Palette et typo = charte (assets/style.css). Classes préfixées bdo- (offres)
+   et bdq- (questionnaires). */
+
+/* ---------- Page des offres ---------- */
+.bdo-hero{padding:64px 0 36px}
+.bdo-hero h1{font-size:clamp(2.2rem,5.4vw,4.4rem)}
+.bdo-offers{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+.bdo-offer{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:26px;box-shadow:0 10px 30px rgba(0,0,0,.04);display:flex;flex-direction:column}
+.bdo-offer h2{font-size:1.6rem;letter-spacing:-.03em;line-height:1.1;margin:0 0 6px}
+.bdo-offer .bdo-promise{color:#3C3936;font-size:1.06rem;margin:0 0 16px}
+.bdo-price{font-size:2.2rem;font-weight:800;letter-spacing:-.04em;margin:4px 0 2px}
+.bdo-price-note{font-size:.9rem;color:var(--muted);margin:0 0 18px}
+.bdo-offer ul{margin:0 0 18px;padding-left:1.1em;color:#3C3936}
+.bdo-offer li{margin:5px 0}
+.bdo-offer .actions{margin-top:auto;padding-top:8px}
+.bdo-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:20px;background:var(--card)}
+.bdo-table{width:100%;border-collapse:collapse;font-size:.96rem;min-width:560px}
+.bdo-table th,.bdo-table td{padding:13px 16px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.bdo-table thead th{background:var(--soft);font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+.bdo-table tbody th{font-weight:700;width:30%}
+.bdo-table tr:last-child th,.bdo-table tr:last-child td{border-bottom:0}
+.bdo-steps{counter-reset:etape;list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.bdo-steps li{counter-increment:etape;position:relative;padding:16px 18px 16px 60px;background:var(--card);border:1px solid var(--line);border-radius:18px}
+.bdo-steps li::before{content:counter(etape);position:absolute;left:16px;top:14px;width:30px;height:30px;border-radius:50%;background:var(--soft);border:1px solid var(--line);color:var(--accent);font-weight:800;display:flex;align-items:center;justify-content:center}
+.bdo-faq dt{font-weight:750;margin-top:18px}
+.bdo-faq dd{margin:6px 0 0;color:#3C3936}
+.bdo-example{background:var(--soft);border:1px solid var(--line);border-radius:22px;padding:22px}
+.bdo-example p{margin:0 0 10px;color:#3C3936}
+@media(max-width:850px){.bdo-offers{grid-template-columns:1fr}}
+
+/* ---------- Questionnaires ---------- */
+.bdq-head{padding:52px 0 6px}
+.bdq-head h1{font-size:clamp(2rem,5vw,3.3rem)}
+.bdq-wrap{padding:18px 0 76px}
+.bdq-wrap .container{max-width:760px}
+.bdq-intro p{color:#3C3936;margin:0 0 10px}
+.bdq-nojs{background:#FBEAEA;border:1px solid #E7B8B8;border-radius:14px;padding:14px 16px;color:#9B2C2C;font-weight:600}
+.bdq-draft{display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:12px 16px;font-size:.92rem;color:#3C3936;margin:16px 0 0}
+.bdq-draft.visible{display:flex}
+.bdq-draft button{font:inherit;font-size:.88rem;background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;color:var(--ink)}
+.bdq-progress{position:sticky;top:72px;z-index:5;background:rgba(249,248,246,.94);backdrop-filter:blur(10px);padding:10px 0;margin:18px 0 0;border-bottom:1px solid var(--line);font-size:.86rem;color:var(--muted)}
+.bdq-progress .bar{height:4px;border-radius:4px;background:var(--line);margin-top:6px;overflow:hidden}
+.bdq-progress .bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s ease}
+.bdq-form{display:block}
+.bdq-section{padding:30px 0 6px;border-top:1px solid var(--line);margin-top:26px}
+.bdq-section:first-of-type{border-top:0;margin-top:6px}
+.bdq-section h2{font-size:1.36rem;letter-spacing:-.025em;color:var(--accent);margin:0 0 4px}
+.bdq-section > p{color:var(--muted);margin:0 0 6px}
+.bdq-q{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 18px 16px;margin-top:14px;display:grid;gap:9px;min-width:0}
+.bdq-q.error{border-color:#B4453A;box-shadow:0 0 0 3px rgba(180,69,58,.12)}
+.bdq-title{font-weight:700;font-size:1.02rem;line-height:1.4;letter-spacing:-.01em;margin:0}
+.bdq-title .num{color:var(--accent);margin-right:6px}
+.bdq-opt{font-weight:500;color:var(--muted);font-size:.88rem;margin-left:4px}
+.bdq-req{font-weight:700;color:var(--accent);font-size:.88rem;margin-left:4px}
+.bdq-hint{font-size:.9rem;color:var(--muted);line-height:1.45;margin:0}
+.bdq-q textarea{min-height:92px}
+.bdq-q input[type=text],.bdq-q input[type=email],.bdq-q input[type=tel],.bdq-q textarea{background:#fff}
+.bdq-choices{display:grid;gap:7px}
+.bdq-choice{display:flex;gap:10px;align-items:flex-start;font-size:.97rem;line-height:1.4;cursor:pointer}
+.bdq-choice input{width:auto;flex:none;margin-top:3px;accent-color:var(--accent)}
+.bdq-field{display:grid;gap:5px}
+.bdq-field > span{font-size:.92rem;font-weight:600;color:#3C3936}
+.bdq-later{display:flex;gap:8px;align-items:center;font-size:.86rem;color:var(--muted);cursor:pointer;margin-top:2px}
+.bdq-later input{width:auto;accent-color:var(--accent)}
+.bdq-q.later-on > :not(.bdq-title):not(.bdq-later):not(.bdq-hint){opacity:.45}
+.bdq-block{border:1px dashed var(--line);border-radius:16px;padding:14px;display:grid;gap:9px;background:var(--bg)}
+.bdq-block-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.bdq-block-head strong{font-size:.95rem;color:var(--accent)}
+.bdq-small-btn{font:inherit;font-size:.86rem;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;color:var(--ink);justify-self:start}
+.bdq-small-btn:hover{border-color:var(--accent);color:var(--accent)}
+.bdq-theme{border-left:3px solid var(--soft);padding:4px 0 4px 14px;display:none;gap:9px}
+.bdq-theme.on{display:grid}
+.bdq-accords .bdq-choice{font-size:.95rem}
+.bdq-notice{font-size:.9rem;color:var(--muted);line-height:1.5;margin:10px 0 0}
+.bdq-notice a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.bdq-errors{display:none;background:#FBEAEA;border:1px solid #E7B8B8;color:#9B2C2C;border-radius:14px;padding:12px 16px;font-size:.93rem;font-weight:600;margin-top:18px}
+.bdq-errors.visible{display:block}
+.bdq-errors ul{margin:6px 0 0;padding-left:1.1em;font-weight:500}
+.bdq-actions{display:grid;gap:12px;justify-items:start;margin-top:24px}
+.bdq-status{font-size:.92rem;color:var(--muted);margin:0}
+.bdq-status.error{color:#9B2C2C}
+.bdq-done{display:none;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:40px 24px;text-align:center;box-shadow:var(--shadow);margin-top:24px}
+.bdq-done h2{font-size:1.8rem;letter-spacing:-.03em;color:var(--accent);margin:0 0 10px}
+.bdq-done p{color:#3C3936;max-width:52ch;margin:0 auto 10px}
+.bdq-done .ref{font-weight:800;letter-spacing:.04em;color:var(--ink)}
+body.bdq-sent .bdq-form,body.bdq-sent .bdq-progress,body.bdq-sent .bdq-draft{display:none !important}
+body.bdq-sent .bdq-done{display:block}
+@media(max-width:520px){.bdq-q{padding:16px 14px}.bdq-block{padding:12px}.bdq-progress{top:66px}}
