@@ -23,6 +23,14 @@ Fichier interne au dépôt. Il n'est pas servi par le site : `_redirects` renvoi
    - La page de retour du paiement ouvre l'espace **une seule fois**, dans les 2 h qui suivent le paiement constaté.
 6. **File d'envoi** (`bd-outbox`, planifiée toutes les 15 min). Elle fait 6 essais (1 min, 5 min, 15 min, 1 h, 4 h, 12 h), puis passe à l'état `echec`, visible. Le lien personnel est émis au moment de l'envoi : aucun lien en clair n'est stocké. **Aucun fournisseur de courriel n'est branché** : les messages restent `en_attente_fournisseur`.
 
+## Stockage (Netlify Blobs), séparé par contexte
+
+- **Production** :
+  - `bd-interets-production` porte les demandes d'intérêt. Il ne dépend pas du mode Stripe : les demandes reçues en phase de test restent telles quelles à la bascule en live, sans migration.
+  - `bd-commandes-production-test` et `bd-commandes-production-live` portent les commandes, jetons, sessions et la file d'envoi. Un paiement de test ne touche jamais les commandes réelles.
+- **Aperçus** (deploy-preview, branch-deploy, dev, contexte inconnu) : un magasin de déploiement (`getDeployStore`), visible de ce seul déploiement. Un aperçu n'ouvre jamais un magasin de production.
+- **Contexte retenu** : celui que Netlify passe à la fonction (`context.deploy.context`), sinon `CONTEXT`. Tout ce qui n'est pas `production` est traité comme un aperçu.
+
 ## Variables d'environnement (noms seulement ; jamais les valeurs dans le dépôt ni dans les journaux)
 
 | Nom | Rôle | Défaut |
@@ -61,7 +69,7 @@ curl -s … -d '{"action":"relancer-envoi","id":"MSG-…"}'
 ## Anciens formulaires Netlify (`biographies-parcours-297`, `biographies-histoire-891`)
 
 - Leurs pages et leur moteur sont retirés ; leurs adresses redirigent vers la demande courte.
-- La garde Edge `netlify/edge-functions/bd-formulaires-fermes.js` répond **410** à tout POST qui les vise, sur toutes les routes, en urlencoded comme en multipart. Les autres formulaires passent par `context.next()`.
+- La garde Edge `netlify/edge-functions/bd-formulaires-fermes.js` répond **410** à tout POST qui les vise, sur toutes les routes, en urlencoded comme en multipart. Elle lit toutes les valeurs `form-name` (`formData().getAll`), doublons compris, sans tenir compte de la casse ni des espaces ; un corps illisible qui contient un ancien nom est refusé. Les autres formulaires passent par `context.next()`.
 - Les soumissions déjà reçues restent dans Netlify : rien n'est supprimé. Ne pas utiliser « Delete form ».
 
 **Ordre de traitement.** La documentation officielle ne dit pas, à ma connaissance, si une fonction Edge passe avant la capture Netlify Forms. Seul un cas rapporté sur le forum Netlify montre qu'une réponse Edge empêche la capture. **Vérification à faire sur l'aperçu de déploiement :**
@@ -72,6 +80,6 @@ curl -s … -d '{"action":"relancer-envoi","id":"MSG-…"}'
 
 ## Tests
 
-- `node --test tests/bd.test.mjs` : 24 tests serveur.
+- `node --test tests/bd.test.mjs` : 25 tests serveur.
 - `CHROMIUM_PATH=… PLAYWRIGHT_GLOBAL=$(npm root -g) node tests/e2e/e2e.mjs <dossier>` : 78 vérifications navigateur, sur un serveur local avec les vraies fonctions, Stripe simulé, sans réseau.
 - Un vrai test Stripe est **bloqué** tant que les clés de test `BD_*` n'existent pas.

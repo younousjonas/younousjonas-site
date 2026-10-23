@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { lireConfig } from '../netlify/functions/bd-lib/config.mjs';
-import { magasinMemoire } from '../netlify/functions/bd-lib/store.mjs';
+import { magasinMemoire, magasinAiguille, plan, contexteDeploiement } from '../netlify/functions/bd-lib/store.mjs';
 import { envoyeurCapture, envoyeurAucun, ESSAIS_MAX } from '../netlify/functions/bd-lib/outbox.mjs';
 import { signerPourTest } from '../netlify/functions/bd-lib/stripe.mjs';
 import { QUESTIONNAIRES } from '../netlify/functions/bd-lib/questionnaires.mjs';
@@ -428,6 +428,35 @@ test('garde Edge : anciens formulaires refusés (urlencoded et multipart, toute 
   }
   assert.equal(await (await mod.default(new Request('https://younousjonas.com/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"form-name":"biographies-parcours-297"}' }), suivant)).text(), 'passe', 'JSON hors périmètre des formulaires Netlify');
   assert.deepEqual(mod.config.excludedPath, ['/.netlify/*']);
+  // Contournements : doublons, casse, espaces, multipart, corps illisible
+  const ue = 'application/x-www-form-urlencoded';
+  for(const corps of ['form-name=leads-younousjonas&form-name=biographies-parcours-297', 'form-name=Biographies-Parcours-297', 'form-name=%20biographies-histoire-891%20', 'x=1&form-name=biographies-histoire-891&form-name=autre']){
+    assert.equal((await mod.default(post('/', corps, ue), suivant)).status, 410, corps);
+  }
+  const dbl = new FormData(); dbl.append('form-name', 'feuille-de-jugement'); dbl.append('form-name', 'biographies-histoire-891');
+  assert.equal((await mod.default(new Request('https://younousjonas.com/x', { method: 'POST', body: dbl }), suivant)).status, 410, 'multipart avec doublon');
+  const casse = post('/', '--b\r\nContent-Disposition: form-data; name="form-name"\r\n\r\nbiographies-parcours-297\r\n(corps tronqué', 'multipart/form-data; boundary=b');
+  assert.equal((await mod.default(casse, suivant)).status, 410, 'multipart illisible contenant un ancien nom');
+  const casseAutre = post('/', '--b\r\nContent-Disposition: form-data; name="form-name"\r\n\r\nfeuille-de-jugement\r\n(corps tronqué', 'multipart/form-data; boundary=b');
+  assert.equal(await (await mod.default(casseAutre, suivant)).text(), 'passe', 'multipart illisible d’un autre formulaire');
+});
+
+test('magasins : production séparée des aperçus ; intérêts indépendants du mode Stripe ; aiguillage par clé', async () => {
+  assert.deepEqual(plan('production', 'test'), { type: 'site', interets: 'bd-interets-production', commandes: 'bd-commandes-production-test' });
+  assert.deepEqual(plan('production', 'live'), { type: 'site', interets: 'bd-interets-production', commandes: 'bd-commandes-production-live' });
+  for(const c of ['deploy-preview', 'branch-deploy', 'dev', 'inconnu']) assert.equal(plan(c, 'test').type, 'deploiement', c);
+  assert.equal(contexteDeploiement({ deploy: { context: 'deploy-preview' } }, { CONTEXT: 'production' }), 'deploy-preview', 'le contexte de la fonction prime');
+  assert.equal(contexteDeploiement(undefined, {}), 'inconnu');
+  const i = magasinMemoire(); const c = magasinMemoire(); const s = magasinAiguille(i, c);
+  await s.setJSON('interets/INT-1', { a: 1 }); await s.setJSON('rl/interet-ip/x/1', { n: 1 });
+  await s.setJSON('commandes/CMD-1', { b: 1 }); await s.setJSON('rl/acces-ip/x/1', { n: 1 });
+  assert.deepEqual([...i._map.keys()].sort(), ['interets/INT-1', 'rl/interet-ip/x/1']);
+  assert.deepEqual([...c._map.keys()].sort(), ['commandes/CMD-1', 'rl/acces-ip/x/1']);
+  assert.deepEqual(await s.list('interets/'), ['interets/INT-1']);
+  // parcours complet sur deux magasins séparés : la confirmation lit l'intérêt et écrit la commande ailleurs
+  const m = monde(); m.d.store = magasinAiguille(magasinMemoire(), magasinMemoire());
+  const { commande } = await commandeConfirmee(m);
+  assert.ok(commande);
 });
 
 // ---------------- 10. Site statique ----------------

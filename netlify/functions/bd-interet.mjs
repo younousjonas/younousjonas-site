@@ -2,4 +2,4 @@
 import { handlerInteret } from './bd-lib/handlers.mjs';
 import { depsProd } from './bd-lib/deps.mjs';
 
-export default async (req, context) => handlerInteret(await depsProd())(req, context);
+export default async (req, context) => handlerInteret(await depsProd(context))(req, context);

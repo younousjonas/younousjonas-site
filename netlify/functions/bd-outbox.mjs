@@ -3,8 +3,8 @@
 import { executerFile } from './bd-lib/handlers.mjs';
 import { depsProd } from './bd-lib/deps.mjs';
 
-export default async () => {
-  const d = await depsProd();
+export default async (req, context) => {
+  const d = await depsProd(context);
   const bilan = await executerFile(d);
   d.journal('outbox', `${bilan.envoyes} envoyé(s), ${bilan.attente} en attente, ${bilan.echecs} échec(s)`);
   return new Response(null, { status: 204 });
