@@ -1,13 +1,13 @@
 // Tests des fonctions bd-* : magasin en mémoire, Stripe intercepté, envoyeur de capture,
 // horloge fixe. Aucun appel réseau, aucun courriel, aucune donnée réelle.
-// Lancer : node --test tests/
+// Lancer : node --test tests/bd.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { lireConfig } from '../netlify/functions/bd-lib/config.mjs';
-import { magasinMemoire, magasinAiguille, plan, contexteDeploiement } from '../netlify/functions/bd-lib/store.mjs';
-import { envoyeurCapture, envoyeurAucun, ESSAIS_MAX } from '../netlify/functions/bd-lib/outbox.mjs';
+import { magasinMemoire, magasinAiguille, plan, contexteDeploiement, adapter, maj, creerSiNouveau } from '../netlify/functions/bd-lib/store.mjs';
+import { envoyeurCapture, envoyeurAucun, ESSAIS_MAX, VERROU_MS } from '../netlify/functions/bd-lib/outbox.mjs';
 import { signerPourTest } from '../netlify/functions/bd-lib/stripe.mjs';
 import { QUESTIONNAIRES } from '../netlify/functions/bd-lib/questionnaires.mjs';
 import { handlerInteret, handlerAdmin, handlerPaiement, handlerWebhook, handlerAcces, handlerQuestionnaire, executerFile } from '../netlify/functions/bd-lib/handlers.mjs';
@@ -18,7 +18,7 @@ const WHSEC = 'whsec_secret_de_test';
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
 function env(extra = {}){
-  return { BD_PAYMENTS_ENABLED: 'true', BD_STRIPE_SECRET_KEY: 'sk_test_cle_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_test_cle_factice', BD_STRIPE_WEBHOOK_SECRET: WHSEC, BD_ADMIN_TOKEN_SHA256: sha(ADMIN), URL: SITE, BD_ADMIN_EMAIL: 'admin@example.invalid', ...extra };
+  return { BD_PAYMENTS_ENABLED: 'true', BD_STRIPE_SECRET_KEY: 'sk_test_cle_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_test_cle_factice', BD_STRIPE_WEBHOOK_SECRET: WHSEC, BD_ADMIN_TOKEN_SHA256: sha(ADMIN), URL: SITE, BD_ADMIN_EMAIL: 'admin@example.invalid', BD_LINK_SECRET: 'secret-de-lien-de-test-0123456789abcdef', ...extra };
 }
 
 function monde(opts = {}){
@@ -26,7 +26,7 @@ function monde(opts = {}){
   const appelsStripe = [];
   const journal = [];
   const d = {
-    store: magasinMemoire(),
+    store: opts.store || magasinMemoire(),
     cfg: lireConfig(opts.env || env()),
     now: () => t,
     envoyeur: opts.envoyeur || envoyeurCapture(),
@@ -59,10 +59,15 @@ async function commandeConfirmee(m, offre = '297', email = INTERET_OK.email){
   const b = await corpsDe(r2);
   return { commande: b.commande, jetonPaiement: b.lienPaiement.split('#t=')[1] };
 }
+async function ouvrirCheckout(m, jetonPaiement){
+  const r = await handlerPaiement(m.d)(req('POST', { action: 'session', jeton: jetonPaiement }));
+  assert.equal(r.status, 200);
+  return 'cs_test_SESSION' + String(m.appelsStripe.length).padStart(4, '0') + 'ABCDEFGH';
+}
 function evenement(id, type, session){ return { id, type, livemode: false, data: { object: session } }; }
 function sessionPayee(commande, offre = '297', extra = {}){
   const montant = offre === '297' ? 29700 : 89100;
-  return { id: 'cs_test_SESSION0001ABCDEFGH', client_reference_id: commande, payment_status: 'paid', amount_total: montant, currency: 'eur', payment_intent: 'pi_test_1', metadata: { bd_commande: commande, bd_offre: offre }, ...extra };
+  return { id: 'cs_test_SESSION0001ABCDEFGH', mode: 'payment', client_reference_id: commande, payment_status: 'paid', amount_total: montant, currency: 'eur', payment_intent: 'pi_test_1', metadata: { bd_commande: commande, bd_offre: offre }, ...extra };
 }
 async function webhook(m, ev, { secret = WHSEC, decalage = 0 } = {}){
   const brut = JSON.stringify(ev);
@@ -199,7 +204,8 @@ test('webhook : signature fausse ou périmée refusée ; non configuré → 503'
 
 test('webhook : paiement réel → commande payée, une seule confirmation (idempotence)', async () => {
   const m = monde();
-  const { commande } = await commandeConfirmee(m);
+  const { commande, jetonPaiement } = await commandeConfirmee(m);
+  await ouvrirCheckout(m, jetonPaiement);
   const ev = evenement('evt_2', 'checkout.session.completed', sessionPayee(commande));
   assert.equal((await corpsDe(await webhook(m, ev))).resultat, 'paye');
   assert.equal((await corpsDe(await webhook(m, ev))).doublon, true);
@@ -214,7 +220,8 @@ test('webhook : paiement réel → commande payée, une seule confirmation (idem
 
 test('webhook : paiement différé — completed non payé n’ouvre rien, async_payment_succeeded ouvre', async () => {
   const m = monde();
-  const { commande } = await commandeConfirmee(m);
+  const { commande, jetonPaiement } = await commandeConfirmee(m);
+  await ouvrirCheckout(m, jetonPaiement);
   await webhook(m, evenement('evt_3', 'checkout.session.completed', sessionPayee(commande, '297', { payment_status: 'unpaid' })));
   let c = await m.d.store.getJSON('commandes/' + commande);
   assert.equal(c.statut, 'paiement_en_cours'); assert.equal((await m.d.store.list('ob/')).length, 0);
@@ -229,9 +236,12 @@ test('webhook : montant, devise, offre ou mode non conformes → aucun accès, a
     ['devise', { currency: 'usd' }, {}],
     ['offre', { metadata: { bd_commande: null, bd_offre: '891' } }, {}],
     ['mode', {}, { livemode: true }],
+    ['abonnement', { mode: 'subscription' }, {}],
+    ['session non enregistrée', { id: 'cs_test_NONENREGISTREE0001' }, {}],
   ]){
     const m = monde();
-    const { commande } = await commandeConfirmee(m);
+    const { commande, jetonPaiement } = await commandeConfirmee(m);
+    await ouvrirCheckout(m, jetonPaiement);
     const s = sessionPayee(commande, '297', extra);
     if(s.metadata.bd_commande === null) s.metadata.bd_commande = commande;
     await webhook(m, { ...evenement('evt_' + nom, 'checkout.session.completed', s), ...evExtra });
@@ -247,8 +257,11 @@ test('webhook : événement d’un autre produit du compte ignoré ; double paie
   const m = monde();
   const r = await webhook(m, evenement('evt_autre', 'checkout.session.completed', { id: 'cs_test_x', payment_status: 'paid', metadata: {} }));
   assert.equal((await corpsDe(r)).resultat, 'ignore_hors_bd');
-  const commande = await commandePayee(m);
-  const second = await webhook(m, evenement('evt_double', 'checkout.session.completed', sessionPayee(commande, '297', { id: 'cs_test_AUTRESESSION0002' })));
+  // deux sessions ouvertes avant paiement (deux onglets), puis deux paiements
+  const { commande, jetonPaiement } = await commandeConfirmee(m);
+  const s1 = await ouvrirCheckout(m, jetonPaiement); const s2 = await ouvrirCheckout(m, jetonPaiement);
+  assert.equal((await corpsDe(await webhook(m, evenement('evt_p1', 'checkout.session.completed', sessionPayee(commande, '297', { id: s1 }))))).resultat, 'paye');
+  const second = await webhook(m, evenement('evt_double', 'checkout.session.completed', sessionPayee(commande, '297', { id: s2 })));
   assert.equal((await corpsDe(second)).resultat, 'double_paiement');
   const c = await m.d.store.getJSON('commandes/' + commande);
   assert.equal(c.anomalies[0].ecarts[0], 'double paiement');
@@ -261,7 +274,11 @@ test('confirmation : prénom, offre, montant, référence, étape, lien personne
   const avant = JSON.stringify([...m.d.store._map.values()]);
   const { msg, jeton } = await lienDuMessage(m);
   assert.equal(msg.to, INTERET_OK.email);
-  for(const attendu of ['Bonjour Test', 'Mon parcours en BD', '297,00 €', commande, 'Prochaine étape', SITE + '/mon-album#cle=', 'reçu']) assert.ok(msg.texte.includes(attendu), attendu);
+  for(const attendu of ['Bonjour Test', 'Mon parcours en BD', '297,00 €', commande, 'Prochaine étape', SITE + '/mon-album#cle=']) assert.ok(msg.texte.includes(attendu), attendu);
+  assert.ok(!msg.texte.includes('reçu'), 'aucune promesse de reçu Stripe tant que BD_STRIPE_RECEIPTS_CONFIRMED n’est pas posé');
+  const mr = monde({ env: env({ BD_STRIPE_RECEIPTS_CONFIRMED: 'oui' }) });
+  await commandePayee(mr);
+  assert.ok((await lienDuMessage(mr)).msg.texte.includes('Votre reçu de paiement vous est adressé séparément par Stripe.'));
   assert.ok(msg.sujet.includes(commande));
   assert.ok(!avant.includes(jeton));
   assert.ok(![...m.d.store._map.values()].join('').includes(jeton), 'seul le hachage du lien est stocké');
@@ -376,7 +393,7 @@ test('questionnaire : brouillons isolés par commande ; effacement ; envoi véri
   // deuxième commande, autre personne
   const { commande: b, jetonPaiement } = await commandeConfirmee(m, '297', 'autre@example.invalid');
   await handlerPaiement(m.d)(req('POST', { action: 'session', jeton: jetonPaiement }));
-  await webhook(m, evenement('evt_b', 'checkout.session.completed', sessionPayee(b, '297', { id: 'cs_test_SESSIONBBBB0002' })));
+  await webhook(m, evenement('evt_b', 'checkout.session.completed', sessionPayee(b, '297', { id: 'cs_test_SESSION0002ABCDEFGH' })));
   const { jeton: jb } = await lienDuMessage(m);
   const { cookie: cb } = await session(m, jb);
 
@@ -516,4 +533,181 @@ test('Checkout : moyens de paiement dynamiques du compte (aucun type imposé), c
   assert.equal(p.get('mode'), 'payment', 'paiement unique, pas d’abonnement');
   assert.ok(![...p.keys()].some((k) => k.includes('subscription') || k.includes('installments')), 'aucun échéancier maison');
   assert.equal(p.get('payment_intent_data[description]'), `BD personnelle — ${commande}`);
+});
+
+// ---------------- 12. Robustesse : écritures conditionnelles, concurrence, pannes injectées ----------------
+const lent = (panne) => magasinMemoire({ latence: 2, panne });
+const fileDe = async (m) => (await Promise.all((await m.d.store.list('ob/')).map((k) => m.d.store.getJSON(k)))).filter(Boolean);
+const adminReq = (corps) => req('POST', corps, { headers: { authorization: 'Bearer ' + ADMIN } });
+// Panne unique : lève une erreur la première fois qu'une écriture vise une clé de ce préfixe.
+function panneUnique(prefixe){
+  let faite = false;
+  return (op, k) => { if(!faite && op === 'set' && k.startsWith(prefixe)){ faite = true; throw new Error('panne_injectee'); } };
+}
+
+test('primitives : maj concurrentes sans perte ; creerSiNouveau n’admet qu’un gagnant', async () => {
+  const s = lent();
+  await Promise.all(Array.from({ length: 25 }, () => maj(s, 'compteur', (v) => ({ n: (v ? v.n : 0) + 1 }))));
+  assert.equal((await s.getJSON('compteur')).n, 25);
+  const gagnants = await Promise.all(Array.from({ length: 10 }, (_, i) => creerSiNouveau(s, 'unique', { i })));
+  assert.equal(gagnants.filter(Boolean).length, 1);
+});
+
+test('adaptateur Netlify : onlyIfNew / onlyIfMatch transmis ; bibliothèque sans écriture conditionnelle → refus explicite', async () => {
+  const appels = [];
+  const faux = {
+    async set(k, v, o){ appels.push(o); return { modified: !(o && o.onlyIfMatch === 'perime'), etag: '"e2"' }; },
+    async getWithMetadata(){ return { data: { a: 1 }, etag: '"e1"' }; },
+  };
+  const a = adapter(faux);
+  assert.deepEqual(await a.setJSONsi('k', {}, { nouveau: true }), { ok: true, etag: '"e2"' });
+  assert.deepEqual(await a.setJSONsi('k', {}, { etag: 'perime' }), { ok: false, etag: '"e2"' });
+  assert.deepEqual(appels, [{ onlyIfNew: true }, { onlyIfMatch: 'perime' }]);
+  assert.deepEqual(await a.getJSONv('k'), { valeur: { a: 1 }, etag: '"e1"' });
+  const ancien = adapter({ async set(){ return undefined; } });
+  await assert.rejects(() => ancien.setJSONsi('k', {}, { nouveau: true }), /ecriture_conditionnelle_non_supportee/);
+});
+
+test('configuration : BD_LINK_SECRET exigé ; live fermé sans fournisseur de courriel', () => {
+  assert.equal(lireConfig(env({ BD_LINK_SECRET: '' })).paiementsActifs, false);
+  assert.equal(lireConfig(env({ BD_LINK_SECRET: 'court' })).paiementsActifs, false);
+  const live = lireConfig(env({ BD_PAYMENTS_MODE: 'live', BD_PAYMENTS_LIVE_CONFIRMED: 'oui', BD_STRIPE_SECRET_KEY: 'sk_live_x', BD_STRIPE_PUBLISHABLE_KEY: 'pk_live_x', BD_MAIL_PROVIDER: 'brevo' }));
+  assert.equal(live.paiementsActifs, false);
+  assert.ok(live.raisonsInactif.some((r) => r.includes('fournisseur de courriel')));
+  assert.equal(lireConfig(env()).recuStripe, false);
+});
+
+test('confirmation admin concurrente : une seule commande, identifiant tiré de la demande ; reprise après panne', async () => {
+  const m = monde({ store: lent() });
+  const { reference } = await corpsDe(await handlerInteret(m.d)(req('POST', INTERET_OK)));
+  const rs = await Promise.all([1, 2, 3].map(() => handlerAdmin(m.d)(adminReq({ action: 'confirmer', interet: reference }))));
+  assert.deepEqual(rs.map((r) => r.status).sort(), [201, 409, 409]);
+  assert.deepEqual(await m.d.store.list('commandes/'), ['commandes/' + 'CMD' + reference.slice(3)]);
+  const idx = await m.d.store.getJSON('idx/email/' + sha(INTERET_OK.email));
+  assert.equal(idx.commandes.length, 1);
+  // panne après création de la commande, avant le marquage de la demande
+  const m2 = monde({ store: magasinMemoire({ panne: panneUnique('interets/INT') }) });
+  const ref2 = 'INT-297-20261023-PANNE2';
+  await m2.d.store._map.set('interets/' + ref2, { v: JSON.stringify({ ...INTERET_OK, reference: ref2, statut: 'nouvelle' }), etag: 'e0' });
+  const r1 = await handlerAdmin(m2.d)(adminReq({ action: 'confirmer', interet: ref2 }));
+  assert.equal(r1.status, 500, 'panne visible');
+  const r2 = await handlerAdmin(m2.d)(adminReq({ action: 'confirmer', interet: ref2 }));
+  const b2 = await corpsDe(r2);
+  assert.equal(r2.status, 409); assert.equal(b2.commande, 'CMD-297-20261023-PANNE2');
+  assert.equal((await m2.d.store.getJSON('interets/' + ref2)).commande, b2.commande, 'demande marquée à la reprise');
+  const nl = await corpsDe(await handlerAdmin(m2.d)(adminReq({ action: 'nouveau-lien-paiement', commande: b2.commande })));
+  assert.match(nl.lienPaiement, /#t=[A-Za-z0-9_-]{43}$/);
+});
+
+test('webhook concurrent : même événement et événements frères simultanés → payée une fois, une confirmation', async () => {
+  const m = monde({ store: lent() });
+  const { commande, jetonPaiement } = await commandeConfirmee(m);
+  await ouvrirCheckout(m, jetonPaiement);
+  const s = sessionPayee(commande);
+  const rs = await Promise.all([
+    webhook(m, evenement('evt_x', 'checkout.session.completed', s)),
+    webhook(m, evenement('evt_x', 'checkout.session.completed', s)),
+    webhook(m, evenement('evt_y', 'checkout.session.async_payment_succeeded', s)),
+  ]);
+  assert.ok(rs.every((r) => r.status === 200));
+  const c = await m.d.store.getJSON('commandes/' + commande);
+  assert.equal(c.statut, 'payee');
+  assert.equal(c.historique.filter((h) => h.evenement === 'paiement_constate').length, 1);
+  assert.equal((await fileDe(m)).filter((x) => x.type === 'confirmation').length, 1);
+});
+
+test('webhook : panne entre « payée » et la mise en file, ou sur le marqueur → 500, la reprise Stripe complète sans doublon', async () => {
+  for(const prefixe of ['ob/MSG-confirmation', 'evt/']){
+    const m = monde({ store: magasinMemoire({ panne: panneUnique(prefixe) }) });
+    const { commande, jetonPaiement } = await commandeConfirmee(m);
+    await ouvrirCheckout(m, jetonPaiement);
+    const ev = evenement('evt_panne', 'checkout.session.completed', sessionPayee(commande));
+    const r1 = await webhook(m, ev);
+    assert.equal(r1.status, 500, prefixe + ' : Stripe réessaiera');
+    assert.equal(await m.d.store.getJSON('evt/evt_panne'), null, prefixe + ' : pas de marqueur');
+    assert.equal((await m.d.store.getJSON('commandes/' + commande)).statut, 'payee');
+    const r2 = await webhook(m, ev);
+    assert.equal(r2.status, 200);
+    assert.equal((await corpsDe(r2)).resultat, 'deja_paye', prefixe);
+    assert.equal((await fileDe(m)).filter((x) => x.type === 'confirmation').length, 1, prefixe + ' : une confirmation');
+    assert.equal((await corpsDe(await webhook(m, ev))).doublon, true);
+  }
+});
+
+test('file : deux traitements simultanés → un seul envoi ; verrou d’un traitement interrompu repris après expiration', async () => {
+  const m = monde({ store: lent() });
+  await commandePayee(m);
+  await Promise.all([executerFile({ ...m.d, travailleur: 'A' }), executerFile({ ...m.d, travailleur: 'B' })]);
+  assert.equal(m.d.envoyeur.envoyes.length, 1);
+  // traitement interrompu : message resté « en_cours » avec un verrou
+  const m2 = monde();
+  await commandePayee(m2);
+  const [k] = await m2.d.store.list('ob/');
+  await maj(m2.d.store, k, (it) => ({ ...it, statut: 'en_cours', verrou: { par: 'disparu', expire: m2.temps() + VERROU_MS } }));
+  await executerFile(m2.d);
+  assert.equal(m2.d.envoyeur.envoyes.length, 0, 'verrou valide respecté');
+  m2.avancer(VERROU_MS + 1);
+  await executerFile(m2.d);
+  assert.equal(m2.d.envoyeur.envoyes.length, 1, 'repris après expiration');
+});
+
+test('file : envoi ambigu (délai dépassé) → reprise avec la même clé d’idempotence et le même lien, toujours valable', async () => {
+  const essais = [];
+  const ambigu = { nom: 'ambigu', disponible: true, async envoyer(msg){ essais.push(msg); if(essais.length === 1) throw new Error('delai_depasse'); return { id: 'f-1' }; } };
+  const m = monde({ envoyeur: ambigu });
+  await commandePayee(m);
+  await executerFile(m.d);
+  m.avancer(2 * 60e3);
+  await executerFile(m.d);
+  assert.equal(essais.length, 2);
+  assert.equal(essais[0].idempotencyKey, essais[1].idempotencyKey);
+  assert.match(essais[0].idempotencyKey, /^MSG-confirmation-/);
+  assert.equal(essais[0].texte, essais[1].texte, 'même lien à la reprise');
+  const jeton = essais[0].texte.match(/#cle=([A-Za-z0-9_-]{43})/)[1];
+  assert.equal((await session(m, jeton)).r.status, 200, 'le lien du premier envoi reste valable');
+  const c = await m.d.store.getJSON('commandes/' + (await fileDe(m))[0].commandeId);
+  assert.equal(c.acces.utilisations, 1, 'la reprise n’a pas réinitialisé le lien');
+});
+
+test('file : accès révoqué avant l’envoi → message annulé, révocation conservée', async () => {
+  const m = monde();
+  const commande = await commandePayee(m);
+  await handlerAdmin(m.d)(adminReq({ action: 'lien-acces', commande }));
+  await handlerAdmin(m.d)(adminReq({ action: 'revoquer-acces', commande }));
+  const bilan = await executerFile(m.d);
+  assert.equal(bilan.annules, 1); assert.equal(m.d.envoyeur.envoyes.length, 0);
+  assert.equal((await fileDe(m))[0].statut, 'annule');
+  assert.equal((await m.d.store.getJSON('commandes/' + commande)).acces.revoque, true);
+});
+
+test('accès concurrent : jamais plus de 10 ouvertures d’un lien, même simultanées', async () => {
+  const m = monde({ store: lent() });
+  await commandePayee(m);
+  const { jeton } = await lienDuMessage(m);
+  const ouvrir = (i) => handlerAcces(m.d)(req('POST', { action: 'ouvrir', jeton }), { ip: '10.0.0.' + i });
+  const rs = await Promise.all(Array.from({ length: 15 }, (_, i) => ouvrir(i)));
+  const ok = rs.filter((r) => r.status === 200).length;
+  assert.ok(ok >= 1 && ok <= 10, 'ouvertures acceptées : ' + ok);
+  const cmd = (await m.d.store.list('commandes/'))[0];
+  assert.equal((await m.d.store.getJSON(cmd)).acces.utilisations, ok, 'chaque ouverture acceptée comptée une fois');
+  let total = ok;
+  for(let i = 0; i < 12; i++) if((await ouvrir(100 + i)).status === 200) total += 1;
+  assert.equal(total, 10);
+  assert.equal((await session(m, jeton)).r.status, 404);
+});
+
+test('retour de paiement concurrent : un seul accès direct ; envoi du questionnaire concurrent : un seul envoi', async () => {
+  const m = monde({ store: lent() });
+  const commande = await commandePayee(m, '891');
+  const rs = await Promise.all(Array.from({ length: 5 }, () => handlerPaiement(m.d)(req('POST', { action: 'statut', sessionId: 'cs_test_SESSION0001ABCDEFGH' }))));
+  assert.equal(rs.filter((r) => r.headers.get('set-cookie')).length, 1);
+  const { jeton } = await lienDuMessage(m);
+  const { cookie } = await session(m, jeton);
+  const corps = { action: 'envoyer', valeurs: { q1: 'A', 'q2.__later': 'oui', 'q5.alt': ['Je préfère que nous les choisissions ensemble.'], accord_reponses: 'oui' } };
+  const envois = await Promise.all([1, 2, 3].map(() => handlerQuestionnaire(m.d)(req('POST', corps, { cookie }))));
+  const statuts = envois.map((r) => r.status).sort();
+  assert.equal(statuts.filter((x) => x === 200).length, 1, 'statuts : ' + statuts);
+  assert.ok(statuts.filter((x) => x !== 200).every((x) => x === 409));
+  assert.equal((await fileDe(m)).filter((x) => x.dedup === 'alerte:questionnaire:' + commande).length, 1);
+  assert.equal((await m.d.store.getJSON('commandes/' + commande)).statut, 'questionnaire_recu');
 });

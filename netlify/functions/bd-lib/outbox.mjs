@@ -2,58 +2,101 @@
 // puis envoyé par la fonction planifiée bd-outbox, avec reprises, dédoublonnage
 // et état d'échec visible. Aucun fournisseur de courriel n'est branché par défaut :
 // les messages restent alors « en_attente_fournisseur », visibles par l'administration.
-import { hacher, reference } from './util.mjs';
+//
+// Atomicité :
+// - mise en file : l'identifiant du message est tiré de sa clé de dédoublonnage et écrit
+//   en une seule écriture « si nouveau » ; deux mises en file concurrentes du même message
+//   n'en créent qu'un ;
+// - envoi : un message est d'abord réservé (statut « en_cours », verrou daté, écriture
+//   conditionnelle sur l'ETag) ; un seul traitement le détient. Un verrou expiré (traitement
+//   interrompu) se reprend ;
+// - fournisseur : la clé d'idempotence est l'identifiant du message, stable d'une reprise à
+//   l'autre, pour qu'un envoi ambigu (délai dépassé) ne parte pas deux fois.
+import crypto from 'node:crypto';
+import { hacher } from './util.mjs';
+import { maj, creerSiNouveau } from './store.mjs';
 
 const DELAIS = [60e3, 5 * 60e3, 15 * 60e3, 3600e3, 4 * 3600e3, 12 * 3600e3];
 export const ESSAIS_MAX = DELAIS.length;
+export const VERROU_MS = 5 * 60e3;
+const ENVOYABLES = ['a_envoyer', 'en_attente_fournisseur'];
+
+export function idMessage(type, dedup){ return `MSG-${type}-${hacher(dedup).slice(0, 20)}`; }
 
 export async function mettreEnFile(store, { type, dedup, commandeId = null, destinataire, donnees = {} }, maintenant){
-  const kd = 'obd/' + hacher(dedup);
-  const existant = await store.getJSON(kd);
-  if(existant) return { id: existant.id, doublon: true };
-  const id = reference('MSG', type, maintenant);
-  await store.setJSON(kd, { id });
-  await store.setJSON('ob/' + id, {
+  const id = idMessage(type, dedup);
+  const cree = await creerSiNouveau(store, 'ob/' + id, {
     id, type, dedup, commandeId, destinataire, donnees,
-    statut: 'a_envoyer', tentatives: 0, prochainEssai: maintenant, derniereErreur: null,
+    statut: 'a_envoyer', tentatives: 0, prochainEssai: maintenant, derniereErreur: null, verrou: null,
     creeLe: new Date(maintenant).toISOString(), envoyeLe: null,
   });
-  return { id, doublon: false };
+  return { id, doublon: !cree };
 }
 
 // Envoyeurs. « aucun » : pas de fournisseur ; « capture » : tests (rien ne sort).
+// envoyer({ to, sujet, texte, idempotencyKey }) : idempotencyKey est à transmettre au fournisseur.
 export function envoyeurAucun(){ return { nom: 'aucun', disponible: false, async envoyer(){ throw new Error('aucun_fournisseur'); } }; }
 export function envoyeurCapture(){
   const envoyes = [];
   return { nom: 'capture', disponible: true, envoyes, async envoyer(m){ envoyes.push(m); return { id: 'cap-' + envoyes.length }; } };
 }
 
-// Traite les messages dus. composer(item) fabrique {to, sujet, texte} au moment de l'envoi
-// (le lien personnel y est émis à ce moment : aucun lien en clair n'est stocké dans la file).
-export async function traiterFile(store, { envoyeur, composer, maintenant, journal = () => {} }){
+// Erreur sans reprise possible (ex. accès révoqué entre-temps) : le message passe « annule ».
+export class ErreurDefinitive extends Error {}
+
+// Traite les messages dus. composer(item) fabrique {to, sujet, texte} au moment de l'envoi ;
+// pour un même message, il doit produire le même contenu à chaque reprise.
+export async function traiterFile(store, { envoyeur, composer, maintenant, journal = () => {}, travailleur = crypto.randomUUID() }){
   const cles = await store.list('ob/');
-  const bilan = { envoyes: 0, attente: 0, echecs: 0 };
+  const bilan = { envoyes: 0, attente: 0, echecs: 0, annules: 0 };
   for(const k of cles){
-    const it = await store.getJSON(k);
-    if(!it || !['a_envoyer', 'en_attente_fournisseur'].includes(it.statut)) continue;
-    if(it.prochainEssai > maintenant) continue;
     if(!envoyeur.disponible){
-      if(it.statut !== 'en_attente_fournisseur'){ it.statut = 'en_attente_fournisseur'; await store.setJSON(k, it); }
-      bilan.attente += 1;
+      const r = await maj(store, k, (it) => {
+        if(!it || it.prochainEssai > maintenant) return undefined;
+        const reprenable = it.statut === 'a_envoyer' || (it.statut === 'en_cours' && it.verrou && it.verrou.expire <= maintenant);
+        if(!reprenable) return undefined;
+        it.verrou = null;
+        it.statut = 'en_attente_fournisseur'; return it;
+      });
+      if(r.valeur && r.valeur.statut === 'en_attente_fournisseur') bilan.attente += 1;
       continue;
     }
+    // Réservation : seul le traitement dont l'écriture conditionnelle passe envoie le message.
+    let reserve = false;
+    const { valeur: it } = await maj(store, k, (x) => {
+      reserve = false;
+      if(!x || x.prochainEssai > maintenant) return undefined;
+      const libre = ENVOYABLES.includes(x.statut) || (x.statut === 'en_cours' && x.verrou && x.verrou.expire <= maintenant);
+      if(!libre) return undefined;
+      x.statut = 'en_cours'; x.verrou = { par: travailleur, expire: maintenant + VERROU_MS };
+      reserve = true; return x;
+    });
+    if(!reserve) continue;
+    let resultat;
     try{
       const message = await composer(it);
-      const r = await envoyeur.envoyer(message);
-      it.statut = 'envoye'; it.envoyeLe = new Date(maintenant).toISOString(); it.idFournisseur = r && r.id || null; it.derniereErreur = null;
-      bilan.envoyes += 1;
+      const r = await envoyeur.envoyer({ ...message, idempotencyKey: it.id });
+      resultat = { ok: true, idFournisseur: r && r.id || null };
     }catch(e){
-      it.tentatives += 1;
-      it.derniereErreur = String(e && e.message || e).slice(0, 200);
-      if(it.tentatives >= ESSAIS_MAX){ it.statut = 'echec'; bilan.echecs += 1; journal('outbox_echec', it.id); }
-      else { it.statut = 'a_envoyer'; it.prochainEssai = maintenant + DELAIS[it.tentatives - 1]; }
+      resultat = { ok: false, definitif: e instanceof ErreurDefinitive, erreur: String(e && e.message || e).slice(0, 200) };
     }
-    await store.setJSON(k, it);
+    const { valeur: fin } = await maj(store, k, (x) => {
+      if(!x) return undefined;
+      x.verrou = null;
+      if(resultat.ok){
+        x.statut = 'envoye'; x.envoyeLe = new Date(maintenant).toISOString(); x.idFournisseur = resultat.idFournisseur; x.derniereErreur = null;
+        return x;
+      }
+      x.derniereErreur = resultat.erreur;
+      if(resultat.definitif){ x.statut = 'annule'; return x; }
+      x.tentatives += 1;
+      if(x.tentatives >= ESSAIS_MAX) x.statut = 'echec';
+      else { x.statut = 'a_envoyer'; x.prochainEssai = maintenant + DELAIS[x.tentatives - 1]; }
+      return x;
+    });
+    if(fin.statut === 'envoye') bilan.envoyes += 1;
+    else if(fin.statut === 'echec'){ bilan.echecs += 1; journal('outbox_echec', it.id); }
+    else if(fin.statut === 'annule'){ bilan.annules += 1; journal('outbox_annule', it.id); }
   }
   return bilan;
 }

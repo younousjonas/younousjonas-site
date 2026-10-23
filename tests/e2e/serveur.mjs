@@ -11,7 +11,7 @@ const { envoyeurCapture } = await lib('outbox.mjs');
 const H = await lib('handlers.mjs');
 const crypto = await import('node:crypto');
 const origine = `http://localhost:${PORT}`;
-const env = { BD_SITE_URL: origine, BD_ADMIN_TOKEN_SHA256: crypto.createHash('sha256').update('admin-e2e').digest('hex'), BD_STRIPE_WEBHOOK_SECRET: 'whsec_e2e', BD_ADMIN_EMAIL: 'admin@example.invalid' };
+const env = { BD_SITE_URL: origine, BD_ADMIN_TOKEN_SHA256: crypto.createHash('sha256').update('admin-e2e').digest('hex'), BD_STRIPE_WEBHOOK_SECRET: 'whsec_e2e', BD_ADMIN_EMAIL: 'admin@example.invalid', BD_LINK_SECRET: 'secret-de-lien-e2e-0123456789abcdef0123' };
 if(PAIEMENTS) Object.assign(env, { BD_PAYMENTS_ENABLED: 'true', BD_STRIPE_SECRET_KEY: 'sk_test_e2e_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_test_e2e_factice' });
 const envoyeur = envoyeurCapture();
 let n = 0;

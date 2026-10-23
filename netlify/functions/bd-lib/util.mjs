@@ -1,5 +1,6 @@
 // Outils communs : réponses, jetons, cookies, origine, limites de débit.
 import crypto from 'node:crypto';
+import { maj } from './store.mjs';
 
 export function json(status, body, headers = {}){
   return new Response(JSON.stringify(body), {
@@ -14,6 +15,13 @@ export function hacher(valeur){ return crypto.createHash('sha256').update(String
 export function egalConstant(a, b){
   const x = Buffer.from(String(a)); const y = Buffer.from(String(b));
   return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
+// Jeton déterministe (même format que nouveauJeton) : HMAC-SHA256(secret, contexte).
+// Sert au lien personnel d'un message de la file : chaque reprise du même message
+// reproduit le même lien, sans qu'aucun lien en clair soit stocké.
+export function jetonDerive(secret, contexte){
+  if(!secret) throw new Error('secret_lien_absent');
+  return crypto.createHmac('sha256', secret).update(String(contexte), 'utf8').digest('base64url');
 }
 export function jetonValideFormat(t){ return typeof t === 'string' && /^[A-Za-z0-9_-]{43}$/.test(t); }
 
@@ -59,13 +67,20 @@ export function ipClient(req, context){
   return (context && context.ip) || req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for') || 'inconnue';
 }
 
-// Limite de débit simple par fenêtre fixe, stockée dans le magasin.
+// Limite de débit par fenêtre fixe, stockée dans le magasin. Le compteur avance par écriture
+// conditionnelle ; si les conflits persistent, la demande est refusée (jamais comptée sans garde).
 export async function limiter(store, portee, cle, max, fenetreMs, maintenant){
   const fenetre = Math.floor(maintenant / fenetreMs);
   const k = `rl/${portee}/${hacher(cle)}/${fenetre}`;
-  const n = ((await store.getJSON(k)) || { n: 0 }).n + 1;
-  await store.setJSON(k, { n, expire: (fenetre + 1) * fenetreMs });
-  return n <= max;
+  let accepte = false;
+  try{
+    await maj(store, k, (v) => {
+      const n = (v ? v.n : 0) + 1;
+      accepte = n <= max;
+      return accepte ? { n, expire: (fenetre + 1) * fenetreMs } : undefined;
+    });
+  }catch{ return false; }
+  return accepte;
 }
 
 export function nettoyer(s, max){ return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').trim().slice(0, max); }

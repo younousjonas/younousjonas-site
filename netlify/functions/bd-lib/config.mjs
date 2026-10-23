@@ -38,6 +38,10 @@ export const DUREES = {
 };
 export const UTILISATIONS_MAX_LIEN = 10;
 
+// Fournisseurs de courriel pris en charge par la file d'envoi. Aucun pour l'instant :
+// le mode live reste donc fermé (une confirmation de paiement réel doit pouvoir partir).
+export const FOURNISSEURS_COURRIEL = new Set();
+
 // Lecture des variables d'environnement. Aucune valeur secrète n'est jamais renvoyée ni journalisée.
 export function lireConfig(env = process.env){
   const mode = env.BD_PAYMENTS_MODE === 'live' ? 'live' : 'test';
@@ -51,7 +55,11 @@ export function lireConfig(env = process.env){
   if(!sk.startsWith(prefixeSk)) raisons.push('BD_STRIPE_SECRET_KEY absente ou hors mode ' + mode);
   if(!pk.startsWith(prefixePk)) raisons.push('BD_STRIPE_PUBLISHABLE_KEY absente ou hors mode ' + mode);
   if(!wh.startsWith('whsec_')) raisons.push('BD_STRIPE_WEBHOOK_SECRET absente');
+  const secretLien = env.BD_LINK_SECRET || '';
+  if(secretLien.length < 32) raisons.push('BD_LINK_SECRET absente ou trop courte (32 caractères au moins)');
+  const mailProvider = env.BD_MAIL_PROVIDER || 'none';
   if(mode === 'live' && env.BD_PAYMENTS_LIVE_CONFIRMED !== 'oui') raisons.push('mode live sans BD_PAYMENTS_LIVE_CONFIRMED=oui');
+  if(mode === 'live' && !FOURNISSEURS_COURRIEL.has(mailProvider)) raisons.push('mode live sans fournisseur de courriel branché');
   const site = (env.BD_SITE_URL || env.URL || 'https://younousjonas.com').replace(/\/+$/, '');
   const origines = new Set(['https://younousjonas.com', 'https://www.younousjonas.com', site]);
   for(const k of ['URL', 'DEPLOY_PRIME_URL', 'DEPLOY_URL']) if(env[k]) origines.add(String(env[k]).replace(/\/+$/, ''));
@@ -66,7 +74,11 @@ export function lireConfig(env = process.env){
     adminTokenHash: env.BD_ADMIN_TOKEN_SHA256 || '',
     site,
     origines,
-    mailProvider: env.BD_MAIL_PROVIDER || 'none',
+    secretLien,
+    // Ligne « reçu envoyé par Stripe » dans la confirmation : seulement si l'envoi des reçus
+    // par Stripe a été vérifié sur le compte (BD_STRIPE_RECEIPTS_CONFIRMED=oui).
+    recuStripe: env.BD_STRIPE_RECEIPTS_CONFIRMED === 'oui',
+    mailProvider,
     adminEmail: env.BD_ADMIN_EMAIL || '',
   };
 }

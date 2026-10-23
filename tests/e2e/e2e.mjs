@@ -74,7 +74,7 @@ for(const vp of [{ nom: 'mobile', w: 390, h: 844, mobile: true }, { nom: 'bureau
       await page.goto(base + '/paiement-bd-retour?session_id=' + sid);
       await page.waitForTimeout(2500);
       ok(`${tag} retour : en attente tant que le webhook n’est pas passé`, await page.isVisible('#bdp-attente') && !(await page.isVisible('#bdp-confirme')));
-      const sess = { id: sid, client_reference_id: cmd.reference, payment_status: 'paid', amount_total: 89100, currency: 'eur', metadata: { bd_commande: cmd.reference, bd_offre: '891' } };
+      const sess = { id: sid, mode: 'payment', client_reference_id: cmd.reference, payment_status: 'paid', amount_total: 89100, currency: 'eur', metadata: { bd_commande: cmd.reference, bd_offre: '891' } };
       const brut = JSON.stringify({ id: 'evt_e2e_' + vp.nom, type: 'checkout.session.completed', livemode: false, data: { object: sess } });
       const w = await fetch(base + '/.netlify/functions/bd-stripe-webhook', { method: 'POST', headers: { 'stripe-signature': sign(brut), 'content-type': 'application/json' }, body: brut }).then((r) => r.json());
       ok(`${tag} webhook signé : paiement constaté`, w.resultat === 'paye');
