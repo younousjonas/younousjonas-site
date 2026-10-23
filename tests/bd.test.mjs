@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { lireConfig } from '../netlify/functions/bd-lib/config.mjs';
 import { magasinMemoire, magasinAiguille, plan, contexteDeploiement, adapter, maj, creerSiNouveau } from '../netlify/functions/bd-lib/store.mjs';
-import { envoyeurCapture, envoyeurAucun, ESSAIS_MAX, VERROU_MS } from '../netlify/functions/bd-lib/outbox.mjs';
+import { envoyeurCapture, envoyeurAucun, ESSAIS_MAX, VERROU_MS, mettreEnFile } from '../netlify/functions/bd-lib/outbox.mjs';
 import { signerPourTest } from '../netlify/functions/bd-lib/stripe.mjs';
 import { QUESTIONNAIRES } from '../netlify/functions/bd-lib/questionnaires.mjs';
 import { handlerInteret, handlerAdmin, handlerPaiement, handlerWebhook, handlerAcces, handlerQuestionnaire, executerFile } from '../netlify/functions/bd-lib/handlers.mjs';
@@ -492,6 +492,8 @@ test('site : plus aucun questionnaire ni ancien formulaire en page publique ; re
   const offres = fs.readFileSync(new URL('bd-personnelle.html', racine), 'utf8');
   assert.ok(!/huit semaines|8 semaines/.test(offres));
   assert.ok(offres.includes('demande-bd.html?offre=297') && offres.includes('demande-bd.html?offre=891'));
+  assert.ok(offres.includes('Que se passe-t-il après l’envoi de ma demande d’intérêt ?'));
+  assert.ok(!offres.includes('après l’envoi du questionnaire ?'), 'la FAQ décrit le parcours après la demande courte');
   assert.equal(Object.keys(QUESTIONNAIRES).sort().join(), '297,891');
 });
 
@@ -710,4 +712,26 @@ test('retour de paiement concurrent : un seul accès direct ; envoi du questionn
   assert.ok(statuts.filter((x) => x !== 200).every((x) => x === 409));
   assert.equal((await fileDe(m)).filter((x) => x.dedup === 'alerte:questionnaire:' + commande).length, 1);
   assert.equal((await m.d.store.getJSON('commandes/' + commande)).statut, 'questionnaire_recu');
+});
+
+test('file (trois défauts relevés par Codex sur a5262a9) : panne à l’insertion, insertions simultanées, deux ouvriers', async () => {
+  // 1. panne à la première écriture : la reprise crée bien le message (plus d'index séparé qui le masquerait)
+  const s1 = magasinMemoire({ panne: panneUnique('ob/') });
+  const msg = { type: 'confirmation', dedup: 'confirmation:CMD-X', commandeId: 'CMD-X', destinataire: 'acheteur' };
+  await assert.rejects(() => mettreEnFile(s1, msg, 0), /panne_injectee/);
+  assert.equal((await s1.list('ob/')).length, 0);
+  assert.equal((await mettreEnFile(s1, msg, 0)).doublon, false);
+  assert.equal((await s1.list('ob/')).length, 1, 'un message après la reprise');
+  assert.equal((await mettreEnFile(s1, msg, 0)).doublon, true);
+  // 2. deux insertions simultanées du même message : un seul message
+  const s2 = lent();
+  const rs = await Promise.all([mettreEnFile(s2, msg, 0), mettreEnFile(s2, msg, 0)]);
+  assert.deepEqual(rs.map((r) => r.doublon).sort(), [false, true]);
+  assert.equal((await s2.list('ob/')).length, 1);
+  // 3. deux ouvriers simultanés : une seule capture
+  const m = monde({ store: lent() });
+  await commandePayee(m);
+  const bilans = await Promise.all([executerFile({ ...m.d, travailleur: 'ouvrier-1' }), executerFile({ ...m.d, travailleur: 'ouvrier-2' })]);
+  assert.equal(m.d.envoyeur.envoyes.length, 1);
+  assert.equal(bilans[0].envoyes + bilans[1].envoyes, 1);
 });
