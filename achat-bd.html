@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Commander votre album — BD personnelle - Younous Jonas</title>
+  <meta name="description" content="Commander votre album de BD personnelle : vos coordonnées, puis le paiement sécurisé, sur la même page.">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/bd.css">
+  <script src="/assets/config.js"></script>
+  <script defer src="/assets/main.js"></script>
+  <script defer src="/assets/bd-achat.js"></script>
+</head>
+<body data-page="achat-bd">
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="/">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="/bd-personnelle.html">BD personnelle</a><a href="/livres.html">Livres</a><a href="/contact.html">Contact</a></div><a class="btn mobile-toggle" href="/bd-personnelle.html">Les offres</a></div></nav>
+
+<main>
+  <section class="bdq-head"><div class="container" style="max-width:760px">
+    <div class="kicker">BD personnelle</div>
+    <h1>Commander votre album</h1>
+  </div></section>
+
+  <section class="bdq-wrap"><div class="container">
+    <p class="bdq-nojs" id="bdq-nojs">Cette page a besoin de JavaScript. Si votre navigateur le bloque, écrivez à <a href="mailto:hello@younousjonas.com">hello@younousjonas.com</a>.</p>
+
+    <div class="bdq-q" id="bda-q-offre" hidden>
+      <p class="bdq-title">Votre album</p>
+      <div class="bdq-choices" role="radiogroup" aria-label="Album">
+        <label class="bdq-choice"><input type="radio" name="offre" value="297"><span><strong>Mon parcours en BD</strong> · un chapitre de vie · 40 pages · 297 €</span></label>
+        <label class="bdq-choice"><input type="radio" name="offre" value="891"><span><strong>Mon histoire en BD</strong> · plusieurs périodes · 80 pages · deux entretiens d’une heure · 891 €</span></label>
+      </div>
+    </div>
+
+    <div class="summary bdp-summary" id="bda-resume" hidden>
+      <div><span class="label">Votre album</span><span class="formule-fixed" id="bda-libelle"></span></div>
+      <span class="price" id="bda-montant"></span>
+    </div>
+
+    <div id="bda-ferme" hidden>
+      <p class="bdq-notice">Le paiement en ligne n’est pas encore ouvert. Cette page permettra de commander dès son ouverture. Aucune information n’est demandée ni enregistrée pour l’instant.</p>
+      <div class="actions"><a class="btn secondary" href="/bd-personnelle.html">Retour aux offres</a></div>
+    </div>
+
+    <form class="bdq-form" id="bda-form" novalidate hidden>
+      <p class="hp"><label>Ne pas remplir <input name="siteweb" tabindex="-1" autocomplete="off"></label></p>
+      <p class="bdq-intro">Vos coordonnées servent à la commande et à vous transmettre votre lien personnel. Rien d’intime n’est demandé ici : le questionnaire s’ouvre après le paiement.</p>
+
+      <div class="bdq-q" id="bda-q-prenoms">
+        <label class="bdq-field" for="bda-prenoms"><span class="bdq-title">Prénom(s) <span class="bdq-req">(nécessaire)</span></span>
+          <input id="bda-prenoms" name="prenoms" type="text" autocomplete="given-name" maxlength="120"></label>
+      </div>
+      <div class="bdq-q" id="bda-q-nom">
+        <label class="bdq-field" for="bda-nom"><span class="bdq-title">Nom <span class="bdq-req">(nécessaire)</span></span>
+          <input id="bda-nom" name="nom" type="text" autocomplete="family-name" maxlength="120"></label>
+      </div>
+      <div class="bdq-q" id="bda-q-email">
+        <label class="bdq-field" for="bda-email"><span class="bdq-title">Adresse électronique <span class="bdq-req">(nécessaire)</span></span>
+          <span class="bdq-hint">Votre confirmation et votre lien personnel y sont envoyés.</span>
+          <input id="bda-email" name="email" type="email" autocomplete="email" maxlength="254"></label>
+      </div>
+      <div class="bdq-q" id="bda-q-whatsapp">
+        <label class="bdq-field" for="bda-whatsapp"><span class="bdq-title">Numéro WhatsApp, avec l’indicatif du pays <span class="bdq-req">(nécessaire)</span></span>
+          <span class="bdq-hint">Par exemple +262 692 12 34 56, ou +33 6 12 34 56 78.</span>
+          <input id="bda-whatsapp" name="whatsapp" type="tel" autocomplete="tel" inputmode="tel" maxlength="24"></label>
+        <label class="bdq-choice"><input type="checkbox" name="declarationWhatsapp" id="bda-declaration"><span>Ce numéro est bien joignable sur WhatsApp, et j’accepte que Younous m’y écrive au sujet de ma commande.</span></label>
+      </div>
+      <div class="bdq-q" id="bda-q-consentement">
+        <label class="bdq-choice"><input type="checkbox" name="consentement" id="bda-consentement"><span>J’accepte que ces informations servent à traiter ma commande (voir la <a href="/confidentialite.html">politique de confidentialité</a>). <span class="bdq-req">(nécessaire)</span></span></label>
+      </div>
+
+      <p class="bdq-notice">Paiement sécurisé par Stripe, sans quitter le site, pour Run Coaching. Le montant est dû en une fois ; selon votre éligibilité, Klarna ou PayPal peuvent vous proposer leurs propres solutions de financement, à leurs conditions. Votre questionnaire personnel s’ouvre une fois le paiement vérifié.</p>
+      <p class="bdq-notice">Aucun remboursement n’est prévu à la demande, sous réserve des droits que la loi vous garantit.</p>
+
+      <div class="bdq-errors" id="bda-errors" tabindex="-1" role="alert"></div>
+      <div class="bdq-actions">
+        <button class="btn" type="submit">Continuer vers le paiement</button>
+        <p class="bdq-status" id="bda-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+
+    <div id="bda-paiement" hidden>
+      <p class="bdq-hint">Commande <span class="ref" id="bda-ref"></span> · pour <span id="bda-prenom"></span></p>
+      <div id="bda-checkout"></div>
+    </div>
+  </div></section>
+</main>
+
+<footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a data-email href="mailto:hello@younousjonas.com">hello@younousjonas.com</a> · <a href="/mentions-legales.html">Mentions légales</a> · <a href="/confidentialite.html">Confidentialité</a></div></div></footer>
+</body>
+</html>

@@ -12,16 +12,22 @@
 /mako/ /coaching 301!
 /mako.html /coaching 301!
 
-# BD personnelle (23-10-2026) : les anciens questionnaires publics sont retirés.
-# Leurs adresses mènent à la demande d'intérêt courte ; les questionnaires complets
-# ne s'ouvrent plus que dans l'espace privé, après paiement constaté.
-/demande-mon-parcours-en-bd /demande-bd.html?offre=297 301!
-/demande-mon-parcours-en-bd.html /demande-bd.html?offre=297 301!
-/demande-mon-histoire-en-bd /demande-bd.html?offre=891 301!
-/demande-mon-histoire-en-bd.html /demande-bd.html?offre=891 301!
+# BD personnelle (23-10-2026) : les anciens questionnaires publics, la demande d'intérêt et
+# l'ancien lien de paiement sont retirés. Tout mène à l'achat direct de la bonne offre ;
+# les questionnaires ne s'ouvrent que dans l'espace privé, après paiement vérifié.
+# (Netlify transmet la chaîne de requête, donc ?offre=297|891, quand la cible n'en fixe pas.)
+/demande-mon-parcours-en-bd /achat-bd?offre=297 301!
+/demande-mon-parcours-en-bd.html /achat-bd?offre=297 301!
+/demande-mon-histoire-en-bd /achat-bd?offre=891 301!
+/demande-mon-histoire-en-bd.html /achat-bd?offre=891 301!
+/demande-bd /achat-bd 301!
+/demande-bd.html /achat-bd 301!
+/paiement-bd /achat-bd 301!
+/paiement-bd.html /achat-bd 301!
 /assets/bd-questionnaire.js /404 404!
+/assets/bd-interet.js /404 404!
+/achat-bd /achat-bd.html 200
 /mon-album /mon-album.html 200
-/paiement-bd /paiement-bd.html 200
 /paiement-bd-retour /paiement-bd-retour.html 200
 # Fichiers du dépôt jamais servis : sources des fonctions Edge, dépendances, tests.
 /netlify/* /404 404!

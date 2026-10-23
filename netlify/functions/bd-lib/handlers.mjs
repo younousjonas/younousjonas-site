@@ -3,7 +3,7 @@
 //
 // Écritures : toute modification d'un objet existant passe par maj() (lecture, modification,
 // écriture conditionnelle sur l'ETag, rejouée en cas de conflit) ; toute création par
-// creerSiNouveau(). Les index secondaires (jp/, ja/, cs/) sont écrits avant l'objet qui les
+// creerSiNouveau(). Les index secondaires (achat/, ja/, cs/) sont écrits avant l'objet qui les
 // valide : un index orphelin, laissé par une panne, ne donne aucun droit (l'empreinte est
 // toujours revérifiée sur la commande).
 import { OFFRES, offre as offreDe, montantTexte, DUREES, UTILISATIONS_MAX_LIEN } from './config.mjs';
@@ -37,31 +37,6 @@ async function majCommande(store, id, fn){ return maj(store, CLE(id), (c) => (c 
 function trace(c, maintenant, evenement, extra = {}){ (c.historique ||= []).push({ le: ISO(maintenant), evenement, ...extra }); }
 const payee = (c) => !!c && (c.statut === 'payee' || c.statut === 'questionnaire_recu');
 const supprimer = async (store, k) => { try{ await store.delete(k); }catch{ /* index orphelin sans effet */ } };
-
-// Lien personnel de paiement : l'index jp/ est écrit d'abord, puis l'empreinte sur la commande.
-async function emettreJetonPaiement(store, id, maintenant, etatsPermis){
-  const jeton = nouveauJeton(); const h = hacher(jeton);
-  await creerSiNouveau(store, 'jp/' + h, { commande: id });
-  let ancien = null;
-  const r = await majCommande(store, id, (c) => {
-    if(!etatsPermis.includes(c.statut)) return undefined;
-    ancien = c.paiementJeton && c.paiementJeton.hash;
-    c.paiementJeton = { hash: h, expire: maintenant + DUREES.lienPaiement };
-    trace(c, maintenant, 'lien_paiement_emis');
-    return c;
-  });
-  if(!r.ecrit){ await supprimer(store, 'jp/' + h); return null; }
-  if(ancien) await supprimer(store, 'jp/' + ancien);
-  return jeton;
-}
-async function commandeParJetonPaiement(store, jeton, maintenant){
-  if(!jetonValideFormat(jeton)) return null;
-  const h = hacher(jeton);
-  const ref = await store.getJSON('jp/' + h);
-  const c = ref && await lireCommande(store, ref.commande);
-  if(!c || !c.paiementJeton || !egalConstant(c.paiementJeton.hash, h) || c.paiementJeton.expire < maintenant) return null;
-  return c;
-}
 
 // Lien personnel d'accès au questionnaire : un seul lien valable à la fois (le précédent est révoqué).
 //
@@ -161,37 +136,98 @@ async function alerter(store, maintenant, sujet, texte, cle){
   await mettreEnFile(store, { type: 'alerte', dedup: 'alerte:' + cle, destinataire: 'admin', donnees: { sujet, texte } }, maintenant);
 }
 
-// ---------- 1. Demande d'intérêt (publique) ----------
+// ---------- 1. Demande d'intérêt : retirée (décision du 23-10-2026) ----------
+// Plus aucune demande n'est enregistrée. Les demandes déjà reçues restent dans le magasin,
+// lisibles par l'administration (action « lister »). La réponse renvoie vers l'achat.
 export function handlerInteret(d){
-  return protege(d, 'interet', async (req, context) => {
+  return protege(d, 'interet', async (req) => {
+    const o = offreDe(new URL(req.url).searchParams.get('offre'));
+    return json(410, { erreur: 'demande_retiree', message: 'La demande d’intérêt n’existe plus : l’album se commande directement.', achat: '/achat-bd' + (o ? '?offre=' + o.code : '') });
+  });
+}
+
+// ---------- 1 bis. Achat direct (page /achat-bd) ----------
+// Coordonnées minimales et paiement dans la même étape. La commande est créée côté serveur,
+// au prix du catalogue, pour l'offre demandée. Tant que le paiement n'est pas ouvert, rien
+// n'est enregistré (pas même un compteur) : aucune demande n'est captée.
+// Idempotence : la page tire une clé d'achat aléatoire à son chargement ; la même clé désigne
+// toujours la même commande et la même session Stripe (double clic, nouvel essai après coupure).
+const CLE_ACHAT = /^[A-Za-z0-9_-]{22,64}$/;
+const ETATS_OUVERTS = ['creee', 'checkout_ouvert'];
+
+export function handlerAchat(d){
+  return protege(d, 'achat', async (req, context) => {
+    const maintenant = d.now(); const s = d.store;
+    if(req.method === 'GET'){
+      const o = offreDe(new URL(req.url).searchParams.get('offre'));
+      if(!o) return json(404, { erreur: 'offre_inconnue' });
+      return json(200, { code: o.code, nom: o.nom, libelle: o.libelle, montant: montantTexte(o.montant, o.devise), etape: o.etape, paiementDisponible: d.cfg.paiementsActifs });
+    }
     if(req.method !== 'POST') return json(405, { erreur: 'methode' });
     if(!origineAutorisee(req, d.cfg)) return json(403, { erreur: 'origine' });
-    const { corps, erreur } = await lireJSON(req, 20_000);
+    const { corps, erreur } = await lireJSON(req, 10_000);
     if(erreur) return json(400, { erreur: 'requete' });
-    const maintenant = d.now();
-    if(!(await limiter(d.store, 'interet-ip', ipClient(req, context), 10, 3600e3, maintenant))) return json(429, { erreur: 'trop_de_demandes' });
-    if(corps.siteweb) return json(201, { reference: 'INT-OK' });      // pot de miel : réponse neutre, rien n'est stocké
+    if(!d.cfg.paiementsActifs){
+      d.journal('paiement_inactif', d.cfg.raisonsInactif.length + ' condition(s) manquante(s)');
+      return json(503, { erreur: 'paiement_indisponible', message: 'Le paiement en ligne n’est pas encore ouvert. Aucune information n’a été enregistrée.' });
+    }
+    if(corps.siteweb) return json(400, { erreur: 'requete' });          // pot de miel
+    if(!(await limiter(s, 'achat-ip', ipClient(req, context), 10, 3600e3, maintenant))) return json(429, { erreur: 'trop_de_demandes' });
     const erreurs = [];
+    const code = String(corps.offre || ''); const o = offreDe(code); if(!o) erreurs.push('offre');
     const prenoms = nettoyer(corps.prenoms, 120); if(!prenoms) erreurs.push('prenoms');
     const nom = nettoyer(corps.nom, 120); if(!nom) erreurs.push('nom');
     const email = nettoyer(corps.email, 254).toLowerCase(); if(!emailValide(email)) erreurs.push('email');
     const whatsapp = normaliserWhatsapp(corps.whatsapp); if(!whatsapp) erreurs.push('whatsapp');
     if(corps.declarationWhatsapp !== true) erreurs.push('declarationWhatsapp');
-    const code = String(corps.offre || ''); if(!offreDe(code)) erreurs.push('offre');
     if(corps.consentement !== true) erreurs.push('consentement');
-    const projet = nettoyer(corps.projet, 600);
+    const cle = String(corps.cle || ''); if(!CLE_ACHAT.test(cle)) erreurs.push('cle');
     if(erreurs.length) return json(422, { erreur: 'champs', champs: erreurs });
-    const ref = reference('INT', code, maintenant);
-    if(!(await creerSiNouveau(d.store, 'interets/' + ref, { reference: ref, offre: code, prenoms, nom, email, whatsapp, declarationWhatsapp: true, projet, consentement: true, statut: 'nouvelle', creeLe: ISO(maintenant) }))) throw new Error('reference_collision');
-    return json(201, { reference: ref });
+    if(!(await limiter(s, 'achat-email', email, 5, 3600e3, maintenant))) return json(429, { erreur: 'trop_de_demandes' });
+
+    // Clé d'achat → commande, en une écriture « si nouveau » ; une clé ne sert qu'à une offre et une adresse.
+    const kA = 'achat/' + hacher(cle);
+    await creerSiNouveau(s, kA, { commande: reference('CMD', o.code, maintenant), offre: o.code, email: hacher(email), creeLe: ISO(maintenant) });
+    const a = await s.getJSON(kA);
+    if(!a || a.offre !== o.code || a.email !== hacher(email)) return json(409, { erreur: 'cle_reutilisee', message: 'Rechargez la page pour recommencer.' });
+    const id = a.commande;
+    const neuve = { id, offre: o.code, montant: o.montant, devise: o.devise, prenoms, nom, email, whatsapp, declarationWhatsapp: true, consentement: true, source: 'achat', statut: 'creee', creeLe: ISO(maintenant), sessionsCheckout: [], historique: [] };
+    trace(neuve, maintenant, 'commande_creee');
+    await creerSiNouveau(s, CLE(id), neuve);
+    await maj(s, 'idx/email/' + hacher(email), (idx) => {
+      const v = idx || { commandes: [] };
+      if(v.commandes.includes(id)) return undefined;
+      v.commandes.push(id); return v;
+    });
+    const c = await lireCommande(s, id);
+    if(payee(c)) return json(409, { erreur: 'deja_paye', reference: id });
+    if(!ETATS_OUVERTS.includes(c.statut)) return json(409, { erreur: 'etat' });
+
+    let sess;
+    try{
+      // Clé d'idempotence Stripe fixe pour la commande : un nouvel essai rend la même session.
+      sess = await creerSessionCheckout({ cfg: d.cfg, commande: c, offre: o, fetchFn: d.fetchFn, tentative: 'achat' });
+    }catch(e){
+      d.journal('checkout_erreur', String(e.message).slice(0, 80));
+      return json(502, { erreur: 'stripe_indisponible', message: 'Le paiement n’a pas pu s’ouvrir. Réessayez dans un moment.' });
+    }
+    // La session est enregistrée sur la commande AVANT que le client reçoive de quoi payer :
+    // le webhook n'accepte que les sessions ainsi enregistrées.
+    await creerSiNouveau(s, 'cs/' + sess.id, { commande: c.id });
+    let refus = null;
+    await majCommande(s, c.id, (x) => {
+      refus = null;
+      if(payee(x) || !ETATS_OUVERTS.includes(x.statut)){ refus = payee(x) ? 'deja_paye' : 'etat'; return undefined; }
+      if(x.sessionsCheckout.some((y) => y.id === sess.id)) return undefined;
+      x.sessionsCheckout.push({ id: sess.id, creeLe: ISO(maintenant) }); x.statut = 'checkout_ouvert'; trace(x, maintenant, 'checkout_ouvert');
+      return x;
+    });
+    if(refus) return json(409, { erreur: refus, reference: id });
+    return json(200, { ...resumeCommande(c), clientSecret: sess.clientSecret, publishableKey: d.cfg.stripePublishable, mode: d.cfg.mode });
   });
 }
 
 // ---------- 2. Administration (jeton porteur, comparé à son empreinte) ----------
-// Identifiant de commande tiré de la demande d'intérêt : INT-297-20261023-ABCDEF → CMD-297-20261023-ABCDEF.
-// Deux confirmations concurrentes visent donc la même clé ; une seule crée la commande.
-export const idCommandeDeInteret = (ref) => 'CMD' + ref.slice(3);
-
 export function handlerAdmin(d){
   return protege(d, 'admin', async (req) => {
     if(!d.cfg.adminTokenHash) return json(503, { erreur: 'admin_non_configure' });
@@ -209,36 +245,10 @@ export function handlerAdmin(d){
         const file = (await lire('ob/')).map((m) => ({ id: m.id, type: m.type, commande: m.commandeId, statut: m.statut, tentatives: m.tentatives, derniereErreur: m.derniereErreur }));
         return json(200, { interets: await lire('interets/'), commandes, file, paiements: { actifs: d.cfg.paiementsActifs, mode: d.cfg.mode, raisons: d.cfg.raisonsInactif } });
       }
-      case 'confirmer': {
-        const refInteret = nettoyer(corps.interet, 80);
-        const i = /^INT-/.test(refInteret) ? await s.getJSON('interets/' + refInteret) : null;
-        if(!i) return json(404, { erreur: 'interet_inconnu' });
-        const id = idCommandeDeInteret(i.reference);
-        if(i.commande) return json(409, { erreur: 'deja_confirmee', commande: i.commande });
-        const o = offreDe(i.offre);
-        const jetonPaiement = nouveauJeton(); const h = hacher(jetonPaiement);
-        await creerSiNouveau(s, 'jp/' + h, { commande: id });
-        const c = { id, offre: o.code, montant: o.montant, devise: o.devise, prenoms: i.prenoms, nom: i.nom, email: i.email, whatsapp: i.whatsapp, interet: i.reference, statut: 'confirmee', creeLe: ISO(maintenant), sessionsCheckout: [], historique: [], paiementJeton: { hash: h, expire: maintenant + DUREES.lienPaiement } };
-        trace(c, maintenant, 'projet_confirme');
-        const cree = await creerSiNouveau(s, CLE(id), c);
-        if(!cree) await supprimer(s, 'jp/' + h);
-        // Suite idempotente, rejouée par une confirmation répétée après une panne.
-        await maj(s, 'idx/email/' + hacher(i.email), (idx) => {
-          const v = idx || { commandes: [] };
-          if(v.commandes.includes(id)) return undefined;
-          v.commandes.push(id); return v;
-        });
-        await maj(s, 'interets/' + i.reference, (x) => (x && x.commande !== id ? { ...x, statut: 'confirmee', commande: id } : undefined));
-        if(!cree) return json(409, { erreur: 'deja_confirmee', commande: id, conseil: 'Demander un lien avec l’action nouveau-lien-paiement.' });
-        return json(201, { commande: id, lienPaiement: `${d.cfg.site}/paiement-bd#t=${jetonPaiement}`, avertissement: 'Lien affiché une seule fois. À transmettre par Younous à la personne.' });
-      }
-      case 'nouveau-lien-paiement': {
-        const c = await lireCommande(s, nettoyer(corps.commande, 80));
-        if(!c) return json(409, { erreur: 'etat' });
-        const jetonP = await emettreJetonPaiement(s, c.id, maintenant, ['confirmee', 'checkout_ouvert']);
-        if(!jetonP) return json(409, { erreur: 'etat' });
-        return json(200, { lienPaiement: `${d.cfg.site}/paiement-bd#t=${jetonP}` });
-      }
+      case 'confirmer':
+      case 'nouveau-lien-paiement':
+        // Validation manuelle préalable retirée : l'album se commande directement sur /achat-bd.
+        return json(410, { erreur: 'action_retiree' });
       case 'lien-acces': {
         const c = await lireCommande(s, nettoyer(corps.commande, 80));
         if(!payee(c)) return json(409, { erreur: 'commande_non_payee' });
@@ -272,7 +282,7 @@ export function handlerAdmin(d){
   });
 }
 
-// ---------- 3. Paiement intégré (page /paiement-bd, jeton dans le fragment d'URL) ----------
+// ---------- 3. Retour de paiement (page /paiement-bd-retour) ----------
 export function handlerPaiement(d){
   return protege(d, 'paiement', async (req, context) => {
     if(req.method !== 'POST') return json(405, { erreur: 'methode' });
@@ -304,41 +314,6 @@ export function handlerPaiement(d){
       return json(200, { statut: 'paye', acces: false, ...resumeCommande(c0) });
     }
 
-    const c = await commandeParJetonPaiement(s, corps.jeton, maintenant);
-    if(!c) return json(404, GENERIQUE_LIEN);
-    if(corps.action === 'resume'){
-      return json(200, { ...resumeCommande(c), statut: c.statut, dejaPaye: payee(c), paiementDisponible: d.cfg.paiementsActifs });
-    }
-    if(corps.action === 'session'){
-      if(payee(c)) return json(409, { erreur: 'deja_paye' });
-      if(!['confirmee', 'checkout_ouvert'].includes(c.statut)) return json(409, { erreur: 'etat' });
-      if(!d.cfg.paiementsActifs){
-        d.journal('paiement_inactif', d.cfg.raisonsInactif.length + ' condition(s) manquante(s)');
-        return json(503, { erreur: 'paiement_indisponible', message: 'Le paiement en ligne n’est pas encore ouvert. Younous vous recontacte.' });
-      }
-      if(!(await limiter(s, 'paiement-cmd', c.id, 20, 3600e3, maintenant))) return json(429, { erreur: 'trop_de_demandes' });
-      const o = offreDe(c.offre);
-      let sess;
-      try{
-        sess = await creerSessionCheckout({ cfg: d.cfg, commande: c, offre: o, fetchFn: d.fetchFn, tentative: c.sessionsCheckout.length + 1 });
-      }catch(e){
-        d.journal('checkout_erreur', String(e.message).slice(0, 80));
-        return json(502, { erreur: 'stripe_indisponible', message: 'Le paiement n’a pas pu s’ouvrir. Réessayez dans un moment.' });
-      }
-      // La session est enregistrée sur la commande AVANT que le client reçoive de quoi payer :
-      // le webhook n'accepte que les sessions ainsi enregistrées.
-      await creerSiNouveau(s, 'cs/' + sess.id, { commande: c.id });
-      let refus = null;
-      await majCommande(s, c.id, (x) => {
-        refus = null;
-        if(payee(x) || !['confirmee', 'checkout_ouvert'].includes(x.statut)){ refus = payee(x) ? 'deja_paye' : 'etat'; return undefined; }
-        if(x.sessionsCheckout.some((y) => y.id === sess.id)) return undefined;
-        x.sessionsCheckout.push({ id: sess.id, creeLe: ISO(maintenant) }); x.statut = 'checkout_ouvert'; trace(x, maintenant, 'checkout_ouvert');
-        return x;
-      });
-      if(refus) return json(409, { erreur: refus });
-      return json(200, { clientSecret: sess.clientSecret, publishableKey: d.cfg.stripePublishable, mode: d.cfg.mode });
-    }
     return json(400, { erreur: 'action_inconnue' });
   });
 }
@@ -384,7 +359,7 @@ export function handlerWebhook(d){
       return marquer('expire');
     }
     if(ev.type === 'checkout.session.async_payment_failed'){
-      await majCommande(s, c.id, unefois((x) => { if(payee(x)) return undefined; x.statut = 'confirmee'; trace(x, maintenant, 'paiement_differe_echoue', { evt: ev.id }); return x; }));
+      await majCommande(s, c.id, unefois((x) => { if(payee(x)) return undefined; x.statut = 'creee'; trace(x, maintenant, 'paiement_differe_echoue', { evt: ev.id }); return x; }));
       return marquer('paiement_echoue');
     }
     if(cs.payment_status !== 'paid'){
@@ -402,7 +377,7 @@ export function handlerWebhook(d){
 
     // Passage à « payée » par écriture conditionnelle.
     let issue = null;
-    const r = await majCommande(s, c.id, (x) => {
+    await majCommande(s, c.id, (x) => {
       if(payee(x)){ issue = x.paiement && x.paiement.session === cs.id ? 'deja_paye' : 'double_paiement'; return undefined; }
       issue = 'paye';
       x.statut = 'payee';
@@ -415,11 +390,6 @@ export function handlerWebhook(d){
     // Payée (maintenant ou lors d'un passage interrompu) : la confirmation est (re)mise en file ;
     // le dédoublonnage garantit un seul message.
     await mettreEnFile(s, { type: 'confirmation', dedup: 'confirmation:' + c.id, commandeId: c.id, destinataire: 'acheteur', generation: 1 }, maintenant);
-    const pj = r.valeur && r.valeur.paiementJeton;
-    if(pj && pj.hash){
-      await majCommande(s, c.id, (x) => (x.paiementJeton ? { ...x, paiementJeton: null } : undefined));
-      await supprimer(s, 'jp/' + pj.hash);
-    }
     return marquer(issue);
   });
 }

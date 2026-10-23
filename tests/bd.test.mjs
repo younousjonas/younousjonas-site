@@ -10,7 +10,7 @@ import { magasinMemoire, magasinAiguille, plan, contexteDeploiement, adapter, ma
 import { envoyeurCapture, envoyeurAucun, ESSAIS_MAX, VERROU_MS, mettreEnFile } from '../netlify/functions/bd-lib/outbox.mjs';
 import { signerPourTest } from '../netlify/functions/bd-lib/stripe.mjs';
 import { QUESTIONNAIRES } from '../netlify/functions/bd-lib/questionnaires.mjs';
-import { handlerInteret, handlerAdmin, handlerPaiement, handlerWebhook, handlerAcces, handlerQuestionnaire, executerFile } from '../netlify/functions/bd-lib/handlers.mjs';
+import { handlerInteret, handlerAchat, handlerAdmin, handlerPaiement, handlerWebhook, handlerAcces, handlerQuestionnaire, executerFile } from '../netlify/functions/bd-lib/handlers.mjs';
 
 const SITE = 'https://younousjonas.com';
 const ADMIN = 'jeton-admin-de-test';
@@ -24,6 +24,8 @@ function env(extra = {}){
 function monde(opts = {}){
   let t = Date.UTC(2026, 9, 23, 15, 0, 0);
   const appelsStripe = [];
+  const sessions = [];             // sessions Stripe distinctes (Stripe simulé idempotent : même clé → même session)
+  const parCle = new Map();
   const journal = [];
   const d = {
     store: opts.store || magasinMemoire(),
@@ -34,11 +36,16 @@ function monde(opts = {}){
     fetchFn: async (url, init) => {
       appelsStripe.push({ url, init });
       if(opts.stripeEchec) return new Response(JSON.stringify({ error: { type: 'api_error' } }), { status: 500 });
-      const n = appelsStripe.length;
-      return new Response(JSON.stringify({ id: 'cs_test_SESSION' + String(n).padStart(4, '0') + 'ABCDEFGH', client_secret: 'cs_test_secret_client_' + n, livemode: false }), { status: 200 });
+      const k = init.headers['idempotency-key'];
+      if(!parCle.has(k)){
+        const n = sessions.length + 1;
+        parCle.set(k, { id: 'cs_test_SESSION' + String(n).padStart(4, '0') + 'ABCDEFGH', client_secret: 'cs_test_secret_client_' + n, livemode: false });
+        sessions.push(parCle.get(k).id);
+      }
+      return new Response(JSON.stringify(parCle.get(k)), { status: 200 });
     },
   };
-  return { d, avancer: (ms) => { t += ms; }, appelsStripe, journal, temps: () => t };
+  return { d, avancer: (ms) => { t += ms; }, appelsStripe, sessions, journal, temps: () => t };
 }
 
 function req(method, corps, { cookie, origin = SITE, headers = {} } = {}){
@@ -50,20 +57,20 @@ function req(method, corps, { cookie, origin = SITE, headers = {} } = {}){
 const corpsDe = async (r) => r.json();
 const cookieDe = (r) => (r.headers.get('set-cookie') || '').split(';')[0];
 
-const INTERET_OK = { offre: '297', prenoms: 'Test', nom: 'Synthétique', email: 'test.synthetique@example.invalid', whatsapp: '+262 692 00 00 00', declarationWhatsapp: true, consentement: true, projet: '' };
+const INTERET_OK = { offre: '297', prenoms: 'Test', nom: 'Synthétique', email: 'test.synthetique@example.invalid', whatsapp: '+262 692 00 00 00', declarationWhatsapp: true, consentement: true };
+let nCle = 0;
+const cleAchat = () => 'cle-achat-de-test-' + String(++nCle).padStart(8, '0');
+const achatReq = (corps = {}, opts) => req('POST', { action: 'commander', ...INTERET_OK, cle: cleAchat(), ...corps }, opts);
 
+// Achat direct : coordonnées + session Stripe en une étape. Renvoie la commande et sa session.
 async function commandeConfirmee(m, offre = '297', email = INTERET_OK.email){
-  const r1 = await handlerInteret(m.d)(req('POST', { ...INTERET_OK, offre, email }));
-  const { reference } = await corpsDe(r1);
-  const r2 = await handlerAdmin(m.d)(req('POST', { action: 'confirmer', interet: reference }, { headers: { authorization: 'Bearer ' + ADMIN } }));
-  const b = await corpsDe(r2);
-  return { commande: b.commande, jetonPaiement: b.lienPaiement.split('#t=')[1] };
-}
-async function ouvrirCheckout(m, jetonPaiement){
-  const r = await handlerPaiement(m.d)(req('POST', { action: 'session', jeton: jetonPaiement }));
+  const r = await handlerAchat(m.d)(achatReq({ offre, email }));
   assert.equal(r.status, 200);
-  return 'cs_test_SESSION' + String(m.appelsStripe.length).padStart(4, '0') + 'ABCDEFGH';
+  const b = await corpsDe(r);
+  return { commande: b.reference, session: m.sessions.at(-1), clientSecret: b.clientSecret };
 }
+// La session est déjà ouverte par l'achat : renvoie la dernière créée.
+async function ouvrirCheckout(m){ return m.sessions.at(-1); }
 function evenement(id, type, session){ return { id, type, livemode: false, data: { object: session } }; }
 function sessionPayee(commande, offre = '297', extra = {}){
   const montant = offre === '297' ? 29700 : 89100;
@@ -80,9 +87,8 @@ async function lienDuMessage(m){
   return { msg, jeton: msg.texte.match(/#cle=([A-Za-z0-9_-]{43})/)[1] };
 }
 async function commandePayee(m, offre = '297'){
-  const { commande, jetonPaiement } = await commandeConfirmee(m, offre);
-  await handlerPaiement(m.d)(req('POST', { action: 'session', jeton: jetonPaiement }));
-  const r = await webhook(m, evenement('evt_paye_' + commande, 'checkout.session.completed', sessionPayee(commande, offre)));
+  const { commande, session: sid } = await commandeConfirmee(m, offre);
+  const r = await webhook(m, evenement('evt_paye_' + commande, 'checkout.session.completed', sessionPayee(commande, offre, { id: sid })));
   assert.equal((await corpsDe(r)).resultat, 'paye');
   return commande;
 }
@@ -91,58 +97,65 @@ async function session(m, jeton){
   return { r, cookie: cookieDe(r) };
 }
 
-// ---------------- 1. Demande d'intérêt ----------------
-test('intérêt : contacts obligatoires, WhatsApp avec indicatif et déclaration, rien d’intime imposé', async () => {
+// ---------------- 1. Demande d'intérêt retirée ----------------
+test('demande d’intérêt retirée : 410 sans rien enregistrer, renvoi vers l’achat ; demandes déjà reçues conservées et listées', async () => {
   const m = monde();
-  const r = await handlerInteret(m.d)(req('POST', { offre: '297' }));
+  await m.d.store.setJSON('interets/INT-297-20261023-ANCIEN', { reference: 'INT-297-20261023-ANCIEN', offre: '297', statut: 'nouvelle' });
+  const avant = [...m.d.store._map.keys()];
+  const r = await handlerInteret(m.d)(new Request(SITE + '/.netlify/functions/bd-interet?offre=891', { method: 'POST', headers: { 'content-type': 'application/json', origin: SITE }, body: JSON.stringify(INTERET_OK) }));
+  assert.equal(r.status, 410);
+  assert.equal((await corpsDe(r)).achat, '/achat-bd?offre=891');
+  assert.deepEqual([...m.d.store._map.keys()], avant, 'rien n’est enregistré, pas même un compteur');
+  const liste = await corpsDe(await handlerAdmin(m.d)(req('POST', { action: 'lister' }, { headers: { authorization: 'Bearer ' + ADMIN } })));
+  assert.deepEqual(liste.interets.map((x) => x.reference), ['INT-297-20261023-ANCIEN'], 'demandes existantes préservées');
+  for(const action of ['confirmer', 'nouveau-lien-paiement']){
+    assert.equal((await handlerAdmin(m.d)(req('POST', { action, interet: 'INT-297-20261023-ANCIEN' }, { headers: { authorization: 'Bearer ' + ADMIN } }))).status, 410, action);
+  }
+});
+
+// ---------------- 2. Achat direct ----------------
+test('achat : coordonnées vérifiées (WhatsApp avec indicatif et déclaration, accord, clé d’achat), rien d’intime demandé', async () => {
+  const m = monde();
+  const r = await handlerAchat(m.d)(req('POST', { action: 'commander', offre: '297' }));
   assert.equal(r.status, 422);
-  assert.deepEqual((await corpsDe(r)).champs.sort(), ['consentement', 'declarationWhatsapp', 'email', 'nom', 'prenoms', 'whatsapp']);
-  const sansIndicatif = await handlerInteret(m.d)(req('POST', { ...INTERET_OK, whatsapp: '0692000000' }));
-  assert.deepEqual((await corpsDe(sansIndicatif)).champs, ['whatsapp']);
-  const sansDeclaration = await handlerInteret(m.d)(req('POST', { ...INTERET_OK, declarationWhatsapp: false }));
-  assert.deepEqual((await corpsDe(sansDeclaration)).champs, ['declarationWhatsapp']);
-  const ok = await handlerInteret(m.d)(req('POST', INTERET_OK));      // projet vide accepté
-  assert.equal(ok.status, 201);
-  const ref = (await corpsDe(ok)).reference;
-  assert.match(ref, /^INT-297-20261023-[A-Z2-9]{6}$/);
-  const stocke = await m.d.store.getJSON('interets/' + ref);
-  assert.equal(stocke.whatsapp, '+262692000000');
-  assert.equal(stocke.nom, 'Synthétique');
+  assert.deepEqual((await corpsDe(r)).champs.sort(), ['cle', 'consentement', 'declarationWhatsapp', 'email', 'nom', 'prenoms', 'whatsapp']);
+  assert.deepEqual((await corpsDe(await handlerAchat(m.d)(achatReq({ whatsapp: '0692000000' })))).champs, ['whatsapp']);
+  assert.deepEqual((await corpsDe(await handlerAchat(m.d)(achatReq({ declarationWhatsapp: false })))).champs, ['declarationWhatsapp']);
+  assert.deepEqual((await corpsDe(await handlerAchat(m.d)(achatReq({ offre: '100' })))).champs, ['offre']);
+  assert.equal(m.appelsStripe.length, 0);
+  assert.equal((await m.d.store.list('commandes/')).length, 0, 'aucune commande sans coordonnées valides');
+  const ok = await handlerAchat(m.d)(achatReq({ offre: '891', montant: 1, prix: 1 }));
+  assert.equal(ok.status, 200);
+  const b = await corpsDe(ok);
+  assert.match(b.reference, /^CMD-891-20261023-[A-Z2-9]{6}$/);
+  assert.equal(b.montant, '891,00 €');
+  const c = await m.d.store.getJSON('commandes/' + b.reference);
+  assert.equal(c.montant, 89100, 'prix du catalogue, jamais celui du navigateur'); assert.equal(c.offre, '891'); assert.equal(c.statut, 'checkout_ouvert');
+  assert.equal(c.whatsapp, '+262692000000');
+  assert.deepEqual(c.sessionsCheckout.map((x) => x.id), [m.sessions[0]], 'session enregistrée sur la commande');
 });
 
-test('intérêt : origine étrangère refusée, pot de miel neutre, limite de débit', async () => {
+test('achat : origine étrangère refusée, pot de miel, limites par connexion et par adresse', async () => {
   const m = monde();
-  assert.equal((await handlerInteret(m.d)(req('POST', INTERET_OK, { origin: 'https://exemple-hostile.invalid' }))).status, 403);
-  assert.equal((await handlerInteret(m.d)(req('POST', INTERET_OK, { origin: null }))).status, 403);
-  const pot = await handlerInteret(m.d)(req('POST', { ...INTERET_OK, siteweb: 'http://spam' }));
-  assert.equal(pot.status, 201);
-  assert.equal((await m.d.store.list('interets/')).length, 0);
-  for(let i = 0; i < 9; i++) await handlerInteret(m.d)(req('POST', INTERET_OK));
-  assert.equal((await handlerInteret(m.d)(req('POST', INTERET_OK))).status, 429);
+  assert.equal((await handlerAchat(m.d)(achatReq({}, { origin: 'https://exemple-hostile.invalid' }))).status, 403);
+  assert.equal((await handlerAchat(m.d)(achatReq({}, { origin: null }))).status, 403);
+  assert.equal((await handlerAchat(m.d)(achatReq({ siteweb: 'http://spam' }))).status, 400);
+  assert.equal((await m.d.store.list('commandes/')).length, 0);
+  for(let i = 0; i < 5; i++) assert.equal((await handlerAchat(m.d)(achatReq())).status, 200);
+  assert.equal((await handlerAchat(m.d)(achatReq())).status, 429, 'au-delà de 5 commandes par heure pour une adresse');
+  for(let i = 0; i < 4; i++) assert.equal((await handlerAchat(m.d)(achatReq({ email: `autre${i}@example.invalid` }))).status, 200);
+  assert.equal((await handlerAchat(m.d)(achatReq({ email: 'encore@example.invalid' }))).status, 429, 'au-delà de 10 essais par heure pour une connexion');
 });
 
-// ---------------- 2. Administration ----------------
-test('admin : jeton absent ou faux refusé ; confirmation crée la commande au prix serveur', async () => {
-  const m = monde();
-  assert.equal((await handlerAdmin(m.d)(req('POST', { action: 'lister' }))).status, 401);
-  assert.equal((await handlerAdmin(m.d)(req('POST', { action: 'lister' }, { headers: { authorization: 'Bearer faux' } }))).status, 401);
-  const sansConfig = monde({ env: env({ BD_ADMIN_TOKEN_SHA256: '' }) });
-  assert.equal((await handlerAdmin(sansConfig.d)(req('POST', { action: 'lister' }, { headers: { authorization: 'Bearer ' + ADMIN } }))).status, 503);
-  const { commande, jetonPaiement } = await commandeConfirmee(m, '891');
-  const c = await m.d.store.getJSON('commandes/' + commande);
-  assert.equal(c.montant, 89100); assert.equal(c.devise, 'eur'); assert.equal(c.statut, 'confirmee');
-  assert.match(jetonPaiement, /^[A-Za-z0-9_-]{43}$/);
-  assert.ok(!JSON.stringify(c).includes(jetonPaiement), 'le jeton de paiement n’est stocké que haché');
-});
-
-// ---------------- 3. Paiement intégré ----------------
-test('paiement : désactivé par défaut, sans appel Stripe, sans secret dans la réponse', async () => {
+test('achat fermé (par défaut) : page honnête, rien d’enregistré, aucun appel Stripe, aucun secret', async () => {
   const m = monde({ env: env({ BD_PAYMENTS_ENABLED: '' }) });
-  const { jetonPaiement } = await commandeConfirmee(m);
-  const resume = await corpsDe(await handlerPaiement(m.d)(req('POST', { action: 'resume', jeton: jetonPaiement })));
-  assert.equal(resume.paiementDisponible, false); assert.equal(resume.montant, '297,00 €');
-  const r = await handlerPaiement(m.d)(req('POST', { action: 'session', jeton: jetonPaiement }));
+  const g = await handlerAchat(m.d)(new Request(SITE + '/.netlify/functions/bd-achat?offre=297'));
+  const b = await corpsDe(g);
+  assert.equal(b.paiementDisponible, false); assert.equal(b.montant, '297,00 €'); assert.equal(b.nom, 'Mon parcours en BD');
+  assert.equal((await handlerAchat(m.d)(new Request(SITE + '/.netlify/functions/bd-achat?offre=999'))).status, 404);
+  const r = await handlerAchat(m.d)(achatReq());
   assert.equal(r.status, 503); assert.equal((await corpsDe(r)).erreur, 'paiement_indisponible');
+  assert.equal(m.d.store._map.size, 0, 'aucune donnée captée, pas même un compteur');
   assert.equal(m.appelsStripe.length, 0);
   assert.ok(!m.journal.join(' ').includes('sk_test'), 'aucune clé dans les journaux');
 });
@@ -154,18 +167,16 @@ test('paiement : mode live refusé par défaut, clé hors mode refusée', () => 
   assert.equal(lireConfig(env()).paiementsActifs, true);
 });
 
-test('paiement : session Embedded Checkout créée avec le montant serveur et ui_mode=embedded_page', async () => {
+test('achat : session Embedded Checkout au montant serveur, ui_mode=embedded_page, clé d’idempotence fixe par commande', async () => {
   const m = monde();
-  const { commande, jetonPaiement } = await commandeConfirmee(m, '891');
-  const r = await handlerPaiement(m.d)(req('POST', { action: 'session', jeton: jetonPaiement, montant: 1 }));
-  assert.equal(r.status, 200);
-  const b = await corpsDe(r);
+  const { commande } = await commandeConfirmee(m, '891');
+  const b = await corpsDe(await handlerAchat(m.d)(achatReq({ offre: '297' })));
   assert.equal(b.publishableKey, 'pk_test_cle_factice'); assert.ok(b.clientSecret);
   assert.ok(!JSON.stringify(b).includes('sk_test'), 'jamais la clé secrète côté client');
   const { url, init } = m.appelsStripe[0];
   assert.equal(url, 'https://api.stripe.com/v1/checkout/sessions');
   assert.equal(init.headers['stripe-version'], '2026-03-25.dahlia');
-  assert.equal(init.headers['idempotency-key'], `bd-cs-${commande}-1`);
+  assert.equal(init.headers['idempotency-key'], `bd-cs-${commande}-achat`);
   const p = new URLSearchParams(init.body);
   assert.equal(p.get('ui_mode'), 'embedded_page');
   assert.equal(p.get('mode'), 'payment');
@@ -173,19 +184,26 @@ test('paiement : session Embedded Checkout créée avec le montant serveur et ui
   assert.equal(p.get('line_items[0][price_data][currency]'), 'eur');
   assert.equal(p.get('client_reference_id'), commande);
   assert.equal(p.get('metadata[bd_offre]'), '891');
+  assert.equal(p.get('customer_email'), INTERET_OK.email);
   assert.equal(p.get('return_url'), SITE + '/paiement-bd-retour?session_id={CHECKOUT_SESSION_ID}');
 });
 
-test('paiement : jeton invalide ou expiré → réponse générique ; erreur Stripe sans détail', async () => {
+test('achat : double clic et nouvel essai (même clé) → même commande et même session ; erreur Stripe sans détail ; commande payée refusée', async () => {
   const m = monde();
-  const { jetonPaiement } = await commandeConfirmee(m);
-  const invalide = await handlerPaiement(m.d)(req('POST', { action: 'resume', jeton: 'x'.repeat(43) }));
-  assert.equal(invalide.status, 404); assert.equal((await corpsDe(invalide)).erreur, 'lien_invalide');
-  m.avancer(15 * 24 * 3600e3);
-  assert.equal((await handlerPaiement(m.d)(req('POST', { action: 'resume', jeton: jetonPaiement }))).status, 404);
+  const corps = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+  const r1 = await corpsDe(await handlerAchat(m.d)(req('POST', corps)));
+  const r2 = await corpsDe(await handlerAchat(m.d)(req('POST', corps)));
+  assert.equal(r1.reference, r2.reference); assert.equal(r1.clientSecret, r2.clientSecret);
+  assert.equal((await m.d.store.list('commandes/')).length, 1); assert.equal(m.sessions.length, 1);
+  assert.equal((await m.d.store.getJSON('commandes/' + r1.reference)).sessionsCheckout.length, 1);
+  const autre = await handlerAchat(m.d)(req('POST', { ...corps, email: 'autre@example.invalid' }));
+  assert.equal(autre.status, 409, 'une clé d’achat ne sert qu’à une adresse');
+  assert.equal((await handlerAchat(m.d)(req('POST', { ...corps, offre: '891' }))).status, 409, 'ni à une autre offre');
+  await webhook(m, evenement('evt_dc', 'checkout.session.completed', sessionPayee(r1.reference, '297', { id: m.sessions[0] })));
+  const apres = await handlerAchat(m.d)(req('POST', corps));
+  assert.deepEqual([apres.status, (await corpsDe(apres)).erreur], [409, 'deja_paye']);
   const m2 = monde({ stripeEchec: true });
-  const c2 = await commandeConfirmee(m2);
-  const r = await handlerPaiement(m2.d)(req('POST', { action: 'session', jeton: c2.jetonPaiement }));
+  const r = await handlerAchat(m2.d)(achatReq());
   assert.equal(r.status, 502);
   assert.ok(!m2.journal.join(' ').includes('sk_test'));
 });
@@ -199,7 +217,7 @@ test('webhook : signature fausse ou périmée refusée ; non configuré → 503'
   assert.equal((await webhook(m, ev, { decalage: -600 })).status, 400);
   const sans = monde({ env: env({ BD_STRIPE_WEBHOOK_SECRET: '' }) });
   assert.equal((await webhook(sans, ev)).status, 503);
-  assert.equal((await m.d.store.getJSON('commandes/' + commande)).statut, 'confirmee');
+  assert.equal((await m.d.store.getJSON('commandes/' + commande)).statut, 'checkout_ouvert');
 });
 
 test('webhook : paiement réel → commande payée, une seule confirmation (idempotence)', async () => {
@@ -257,9 +275,10 @@ test('webhook : événement d’un autre produit du compte ignoré ; double paie
   const m = monde();
   const r = await webhook(m, evenement('evt_autre', 'checkout.session.completed', { id: 'cs_test_x', payment_status: 'paid', metadata: {} }));
   assert.equal((await corpsDe(r)).resultat, 'ignore_hors_bd');
-  // deux sessions ouvertes avant paiement (deux onglets), puis deux paiements
-  const { commande, jetonPaiement } = await commandeConfirmee(m);
-  const s1 = await ouvrirCheckout(m, jetonPaiement); const s2 = await ouvrirCheckout(m, jetonPaiement);
+  // deux sessions enregistrées sur la commande (cas exceptionnel), puis deux paiements
+  const { commande, session: s1 } = await commandeConfirmee(m);
+  const s2 = 'cs_test_SECONDESESSION0002';
+  await maj(m.d.store, 'commandes/' + commande, (c) => { c.sessionsCheckout.push({ id: s2 }); return c; });
   assert.equal((await corpsDe(await webhook(m, evenement('evt_p1', 'checkout.session.completed', sessionPayee(commande, '297', { id: s1 }))))).resultat, 'paye');
   const second = await webhook(m, evenement('evt_double', 'checkout.session.completed', sessionPayee(commande, '297', { id: s2 })));
   assert.equal((await corpsDe(second)).resultat, 'double_paiement');
@@ -303,8 +322,7 @@ test('file : sans fournisseur, message visible « en_attente_fournisseur » ; re
 // ---------------- 6. Page de retour : jamais de succès sur simple redirection ----------------
 test('retour : « en attente » tant que le webhook n’est pas passé ; accès direct une seule fois', async () => {
   const m = monde();
-  const { commande, jetonPaiement } = await commandeConfirmee(m);
-  await handlerPaiement(m.d)(req('POST', { action: 'session', jeton: jetonPaiement }));
+  const { commande } = await commandeConfirmee(m);
   const sid = 'cs_test_SESSION0001ABCDEFGH';
   const avant = await handlerPaiement(m.d)(req('POST', { action: 'statut', sessionId: sid }));
   assert.equal((await corpsDe(avant)).statut, 'en_attente'); assert.equal(avant.headers.get('set-cookie'), null);
@@ -391,8 +409,7 @@ test('questionnaire : brouillons isolés par commande ; effacement ; envoi véri
   const { jeton: ja } = await lienDuMessage(m);
   const { cookie: ca } = await session(m, ja);
   // deuxième commande, autre personne
-  const { commande: b, jetonPaiement } = await commandeConfirmee(m, '297', 'autre@example.invalid');
-  await handlerPaiement(m.d)(req('POST', { action: 'session', jeton: jetonPaiement }));
+  const { commande: b } = await commandeConfirmee(m, '297', 'autre@example.invalid');
   await webhook(m, evenement('evt_b', 'checkout.session.completed', sessionPayee(b, '297', { id: 'cs_test_SESSION0002ABCDEFGH' })));
   const { jeton: jb } = await lienDuMessage(m);
   const { cookie: cb } = await session(m, jb);
@@ -477,23 +494,31 @@ test('magasins : production séparée des aperçus ; intérêts indépendants du
 });
 
 // ---------------- 10. Site statique ----------------
-test('site : plus aucun questionnaire ni ancien formulaire en page publique ; redirections et blocages en place', () => {
+test('site : ni questionnaire public, ni demande d’intérêt, ni ancien lien de paiement ; tout mène à l’achat de la bonne offre', () => {
   const racine = new URL('../', import.meta.url);
   const pages = fs.readdirSync(racine).filter((f) => f.endsWith('.html'));
-  assert.ok(!pages.includes('demande-mon-parcours-en-bd.html') && !pages.includes('demande-mon-histoire-en-bd.html'));
+  for(const retiree of ['demande-mon-parcours-en-bd.html', 'demande-mon-histoire-en-bd.html', 'demande-bd.html', 'paiement-bd.html']) assert.ok(!pages.includes(retiree), retiree);
+  assert.ok(pages.includes('achat-bd.html'));
   for(const p of pages){
     const t = fs.readFileSync(new URL(p, racine), 'utf8');
     assert.ok(!t.includes('biographies-parcours-297') && !t.includes('biographies-histoire-891'), p + ' : ancien formulaire');
     assert.ok(!t.includes('Quels moments ont infléchi votre histoire'), p + ' : texte de questionnaire');
+    assert.ok(!t.includes('demande-bd') && !t.includes('bd-interet') && !/demande d.intérêt/i.test(t.replace('Les demandes d\'intérêt reçues avant le 23 octobre 2026', '')), p + ' : demande d’intérêt');
   }
-  assert.ok(!fs.existsSync(new URL('assets/bd-questionnaire.js', racine)));
+  assert.ok(!fs.existsSync(new URL('assets/bd-questionnaire.js', racine)) && !fs.existsSync(new URL('assets/bd-interet.js', racine)));
   const red = fs.readFileSync(new URL('_redirects', racine), 'utf8');
-  for(const r of ['/demande-mon-parcours-en-bd /demande-bd.html?offre=297 301!', '/demande-mon-histoire-en-bd.html /demande-bd.html?offre=891 301!', '/netlify/* /404 404!', '/node_modules/* /404 404!', '/tests/* /404 404!']) assert.ok(red.includes(r), r);
+  for(const r of ['/demande-mon-parcours-en-bd /achat-bd?offre=297 301!', '/demande-mon-parcours-en-bd.html /achat-bd?offre=297 301!', '/demande-mon-histoire-en-bd /achat-bd?offre=891 301!', '/demande-mon-histoire-en-bd.html /achat-bd?offre=891 301!',
+    '/demande-bd /achat-bd 301!', '/demande-bd.html /achat-bd 301!', '/paiement-bd /achat-bd 301!', '/paiement-bd.html /achat-bd 301!', '/achat-bd /achat-bd.html 200',
+    '/netlify/* /404 404!', '/node_modules/* /404 404!', '/tests/* /404 404!']) assert.ok(red.includes(r), r);
+  assert.ok(!/\/paiement-bd \/paiement-bd\.html/.test(red), 'ancienne page de paiement plus servie');
+  assert.ok(red.includes('/paiement-bd-retour /paiement-bd-retour.html 200'));
   const offres = fs.readFileSync(new URL('bd-personnelle.html', racine), 'utf8');
   assert.ok(!/huit semaines|8 semaines/.test(offres));
-  assert.ok(offres.includes('demande-bd.html?offre=297') && offres.includes('demande-bd.html?offre=891'));
-  assert.ok(offres.includes('Que se passe-t-il après l’envoi de ma demande d’intérêt ?'));
-  assert.ok(!offres.includes('après l’envoi du questionnaire ?'), 'la FAQ décrit le parcours après la demande courte');
+  assert.ok(offres.includes('href="achat-bd?offre=297"') && offres.includes('href="achat-bd?offre=891"'));
+  assert.ok(offres.includes('Que se passe-t-il après le paiement ?'));
+  assert.ok(!/confirm(é|e) par Younous|projet confirmé|confirmation du projet/.test(offres), 'plus de validation manuelle préalable');
+  assert.ok(offres.includes('six semaines après le second entretien et la réception des éléments nécessaires'), 'délai 891 validé');
+  assert.ok(offres.includes('délai de l’album final est convenu par écrit pour chaque projet'));
   assert.equal(Object.keys(QUESTIONNAIRES).sort().join(), '297,891');
 });
 
@@ -528,8 +553,7 @@ test('webhook coaching : paiements BD ignorés (métadonnées ou description), a
 
 test('Checkout : moyens de paiement dynamiques du compte (aucun type imposé), comptant intégral, description BD', async () => {
   const m = monde();
-  const { commande, jetonPaiement } = await commandeConfirmee(m);
-  await handlerPaiement(m.d)(req('POST', { action: 'session', jeton: jetonPaiement }));
+  const { commande } = await commandeConfirmee(m);
   const p = new URLSearchParams(m.appelsStripe[0].init.body);
   assert.ok(![...p.keys()].some((k) => k.startsWith('payment_method_types')), 'aucun payment_method_types : Stripe propose carte, Klarna, PayPal… selon l’éligibilité');
   assert.equal(p.get('mode'), 'payment', 'paiement unique, pas d’abonnement');
@@ -579,26 +603,28 @@ test('configuration : BD_LINK_SECRET exigé ; live fermé sans fournisseur de co
   assert.equal(lireConfig(env()).recuStripe, false);
 });
 
-test('confirmation admin concurrente : une seule commande, identifiant tiré de la demande ; reprise après panne', async () => {
+test('achat concurrent (même clé) : une commande, une session ; panne après l’index → reprise sur la même commande', async () => {
   const m = monde({ store: lent() });
-  const { reference } = await corpsDe(await handlerInteret(m.d)(req('POST', INTERET_OK)));
-  const rs = await Promise.all([1, 2, 3].map(() => handlerAdmin(m.d)(adminReq({ action: 'confirmer', interet: reference }))));
-  assert.deepEqual(rs.map((r) => r.status).sort(), [201, 409, 409]);
-  assert.deepEqual(await m.d.store.list('commandes/'), ['commandes/' + 'CMD' + reference.slice(3)]);
-  const idx = await m.d.store.getJSON('idx/email/' + sha(INTERET_OK.email));
-  assert.equal(idx.commandes.length, 1);
-  // panne après création de la commande, avant le marquage de la demande
-  const m2 = monde({ store: magasinMemoire({ panne: panneUnique('interets/INT') }) });
-  const ref2 = 'INT-297-20261023-PANNE2';
-  await m2.d.store._map.set('interets/' + ref2, { v: JSON.stringify({ ...INTERET_OK, reference: ref2, statut: 'nouvelle' }), etag: 'e0' });
-  const r1 = await handlerAdmin(m2.d)(adminReq({ action: 'confirmer', interet: ref2 }));
-  assert.equal(r1.status, 500, 'panne visible');
-  const r2 = await handlerAdmin(m2.d)(adminReq({ action: 'confirmer', interet: ref2 }));
-  const b2 = await corpsDe(r2);
-  assert.equal(r2.status, 409); assert.equal(b2.commande, 'CMD-297-20261023-PANNE2');
-  assert.equal((await m2.d.store.getJSON('interets/' + ref2)).commande, b2.commande, 'demande marquée à la reprise');
-  const nl = await corpsDe(await handlerAdmin(m2.d)(adminReq({ action: 'nouveau-lien-paiement', commande: b2.commande })));
-  assert.match(nl.lienPaiement, /#t=[A-Za-z0-9_-]{43}$/);
+  const corps = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+  const rs = await Promise.all([1, 2, 3].map(() => handlerAchat(m.d)(req('POST', corps))));
+  const refs = new Set();
+  for(const r of rs){ if(r.status === 200) refs.add((await corpsDe(r)).reference); else assert.equal(r.status, 409); }
+  assert.equal(refs.size, 1);
+  assert.equal((await m.d.store.list('commandes/')).length, 1);
+  assert.equal(m.sessions.length, 1, 'une seule session Stripe');
+  const [ref] = refs;
+  assert.equal((await m.d.store.getJSON('commandes/' + ref)).sessionsCheckout.length, 1);
+  assert.equal((await m.d.store.getJSON('idx/email/' + sha(INTERET_OK.email))).commandes.length, 1);
+  // panne à la création de la commande, après l'index de la clé d'achat : le nouvel essai la crée
+  const m2 = monde({ store: magasinMemoire({ panne: panneUnique('commandes/') }) });
+  const corps2 = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+  assert.equal((await handlerAchat(m2.d)(req('POST', corps2))).status, 500, 'panne visible');
+  assert.equal((await m2.d.store.list('commandes/')).length, 0);
+  const r2 = await handlerAchat(m2.d)(req('POST', corps2));
+  assert.equal(r2.status, 200);
+  const index = (await m2.d.store.list('achat/')).length;
+  assert.equal(index, 1);
+  assert.equal((await m2.d.store.list('commandes/'))[0], 'commandes/' + (await corpsDe(r2)).reference);
 });
 
 test('webhook concurrent : même événement et événements frères simultanés → payée une fois, une confirmation', async () => {

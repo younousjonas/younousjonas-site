@@ -100,3 +100,6 @@ body.bdq-sent .bdq-done{display:block}
 /* L'attribut hidden l'emporte toujours dans ces pages (formulaire après envoi, états de l'espace privé). */
 .bdq-wrap [hidden]{display:none !important}
 .bdq-field > span.bdq-hint{font-weight:400;color:var(--muted)}
+
+/* Achat : espace entre le choix de l’album et le récapitulatif. */
+.bdq-q + .bdp-summary{margin-top:16px}

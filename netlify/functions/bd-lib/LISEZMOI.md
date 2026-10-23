@@ -4,12 +4,17 @@ Fichier interne au dépôt. Il n'est pas servi par le site : `_redirects` renvoi
 
 ## Parcours
 
-1. **Demande d'intérêt** (`/demande-bd`, fonction `bd-interet`). On y donne ses prénoms, son nom, son adresse électronique, un WhatsApp avec indicatif et la déclaration WhatsApp, puis l'offre (297 ou 891). Le projet est facultatif. La demande est enregistrée dans Netlify Blobs (voir « Stockage »). Aucun courriel ne part.
-2. **Projet confirmé** par Younous, via `bd-admin`, action `confirmer`. La commande est créée au prix serveur, et un lien personnel de paiement s'affiche une seule fois (`/paiement-bd#t=…`). Younous le transmet lui-même. L'identifiant de commande est tiré de la demande (`INT-297-…-ABCDEF` → `CMD-297-…-ABCDEF`) : deux confirmations simultanées n'en créent qu'une.
-3. **Paiement intégré** (`/paiement-bd`, fonction `bd-paiement`) : Stripe Embedded Checkout, `ui_mode=embedded_page`, version d'API épinglée `2026-03-25.dahlia`.
-   - Le paiement est comptant et intégral (`mode=payment`).
-   - Aucun `payment_method_types` n'est imposé : Stripe affiche les moyens de la configuration du compte Run Coaching (carte, Klarna, PayPal…) selon l'éligibilité de chaque acheteur.
-   - Aucun échéancier n'est géré ici.
+Décision de Younous du 23-10-2026 : plus de demande d'intérêt ni de validation manuelle préalable. Offre → achat (coordonnées et paiement sur la même page) → confirmation et questionnaire privé après paiement vérifié.
+
+1. **Offres** (`/bd-personnelle.html`). Les boutons mènent à `/achat-bd?offre=297` ou `?offre=891`. Les anciennes adresses (`/demande-bd`, `/demande-mon-parcours-en-bd`, `/demande-mon-histoire-en-bd`, `/paiement-bd`) redirigent en 301 vers l'achat de la bonne offre.
+2. **Achat** (`/achat-bd`, fonction `bd-achat`).
+   - `GET ?offre=` rend l'offre du catalogue serveur (libellé, montant) et dit si le paiement est ouvert.
+   - **Paiement fermé** (cas par défaut) : la page le dit et n'affiche aucun formulaire. Un `POST` répond 503 sans rien enregistrer, pas même un compteur. Aucune demande n'est captée.
+   - **Paiement ouvert** : prénoms, nom, adresse électronique, WhatsApp avec indicatif et déclaration, accord. Rien d'intime. Le serveur crée la commande au prix du catalogue, pour l'offre demandée (le montant envoyé par le navigateur est ignoré), ouvre la session Stripe, l'enregistre sur la commande, puis renvoie le secret client. Le Checkout se monte sur la même page.
+   - **Double clic, nouvel essai** : la page tire une clé d'achat aléatoire à son chargement. L'index `achat/<empreinte>` (écriture « si nouveau ») lie cette clé à une seule commande, une offre et une adresse ; la clé d'idempotence Stripe `bd-cs-<commande>-achat` rend la même session. Une clé reprise avec une autre adresse ou une autre offre → 409.
+   - **Abus** : pot de miel, origine contrôlée, 10 essais par heure par connexion, 5 par heure par adresse. Une commande déjà réglée → 409 `deja_paye`.
+   - Stripe Embedded Checkout, `ui_mode=embedded_page`, version d'API épinglée `2026-03-25.dahlia`, comptant intégral (`mode=payment`), sans `payment_method_types` (moyens du compte Run Coaching selon l'éligibilité : carte, Klarna, PayPal…), sans échéancier.
+3. **Demandes d'intérêt déjà reçues** : conservées telles quelles dans `bd-interets-production`, lisibles par `bd-admin` (`lister`). `bd-interet` répond désormais 410 et n'enregistre plus rien ; les actions `confirmer` et `nouveau-lien-paiement` répondent 410.
 4. **Webhook** (`bd-stripe-webhook`). Il traite `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` et `checkout.session.expired`.
    - La signature est vérifiée, avec une tolérance de 5 minutes.
    - Chaque étape est idempotente. Un événement rejoué, par Stripe ou après une panne, aboutit au même état, sans seconde confirmation. Le marqueur de l'événement n'est posé qu'à la fin. Toute erreur renvoie 500, et Stripe réessaie.
@@ -36,7 +41,7 @@ Fichier interne au dépôt. Il n'est pas servi par le site : `_redirects` renvoi
 ## Stockage (Netlify Blobs), séparé par contexte
 
 - **Production** :
-  - `bd-interets-production` porte les demandes d'intérêt. Il ne dépend pas du mode Stripe : les demandes reçues en phase de test restent telles quelles à la bascule en live, sans migration.
+  - `bd-interets-production` conserve les demandes d'intérêt reçues avant le 23-10-2026. Plus rien n'y est écrit.
   - `bd-commandes-production-test` et `bd-commandes-production-live` portent les commandes, jetons, sessions et la file d'envoi. Un paiement de test ne touche jamais les commandes réelles.
 - **Aperçus** (deploy-preview, branch-deploy, dev, contexte inconnu) : un magasin de déploiement (`getDeployStore`), visible de ce seul déploiement. Un aperçu n'ouvre jamais un magasin de production.
 - **Contexte retenu** : celui que Netlify passe à la fonction (`context.deploy.context`), sinon `CONTEXT`. Tout ce qui n'est pas `production` est traité comme un aperçu.
@@ -72,7 +77,6 @@ Les clés génériques du coaching (`STRIPE_SECRET_KEY`, etc.) ne sont jamais lu
 
 ```
 curl -s https://younousjonas.com/.netlify/functions/bd-admin -H "Authorization: Bearer $JETON" -H 'content-type: application/json' -d '{"action":"lister"}'
-curl -s … -d '{"action":"confirmer","interet":"INT-297-AAAAMMJJ-XXXXXX"}'      # crée la commande, renvoie le lien de paiement
 curl -s … -d '{"action":"lien-acces","commande":"CMD-…"}'                       # nouveau lien personnel (l'ancien est révoqué)
 curl -s … -d '{"action":"revoquer-acces","commande":"CMD-…"}'
 curl -s … -d '{"action":"reponses","commande":"CMD-…"}'
@@ -99,6 +103,6 @@ curl -s … -d '{"action":"relancer-envoi","id":"MSG-…"}'
 
 ## Tests
 
-- `node --test tests/bd.test.mjs` : 41 tests serveur, dont concurrence (magasin à latence) et pannes injectées (entre « payée » et la mise en file, sur le marqueur d'événement, à la confirmation), deux traitements de file simultanés, envoi ambigu, verrou interrompu.
-- `CHROMIUM_PATH=… PLAYWRIGHT_GLOBAL=$(npm root -g) node tests/e2e/e2e.mjs <dossier des captures, hors du dépôt>` : 78 vérifications navigateur, sur un serveur local avec les vraies fonctions, Stripe simulé, sans réseau.
+- `node --test tests/bd.test.mjs` : 41 tests serveur, dont achat direct (prix serveur, fermé sans capture, double clic, clé réutilisée, limites), concurrence (magasin à latence) et pannes injectées (entre « payée » et la mise en file, sur le marqueur d'événement, à la création de commande), deux traitements de file simultanés, envoi ambigu, verrou interrompu.
+- `CHROMIUM_PATH=… PLAYWRIGHT_GLOBAL=$(npm root -g) node tests/e2e/e2e.mjs <dossier des captures, hors du dépôt>` : 66 vérifications navigateur (offres, achat fermé et ouvert, double clic, aucun questionnaire avant paiement, retour, espace, récupération), sur un serveur local avec les vraies fonctions, Stripe simulé, sans réseau.
 - Un vrai test Stripe est **bloqué** tant que les clés de test `BD_*` n'existent pas.

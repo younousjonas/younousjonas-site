@@ -31,7 +31,6 @@ export function montantTexte(cents, devise){
 
 // Durées (millisecondes).
 export const DUREES = {
-  lienPaiement: 14 * 24 * 3600e3,   // lien personnel de paiement
   lienAcces: 30 * 24 * 3600e3,      // lien personnel du questionnaire
   session: 12 * 3600e3,             // cookie de session
   retourPaiement: 2 * 3600e3,       // accès direct depuis la page de retour, une seule fois

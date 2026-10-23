@@ -6,6 +6,6 @@ Disallow: /feuille-de-jugement
 # Espace privé et paiement des albums BD.
 Disallow: /mon-album
 Disallow: /paiement-bd
-Disallow: /demande-bd
+Disallow: /achat-bd
 
 Sitemap: https://www.younousjonas.com/sitemap.xml

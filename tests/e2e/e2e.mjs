@@ -29,44 +29,44 @@ for(const vp of [{ nom: 'mobile', w: 390, h: 844, mobile: true }, { nom: 'bureau
     page.on('pageerror', (e) => errs.push(e.message));
     const deborde = () => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
+    let postsAchat = 0;
+    page.on('request', (r) => { if(r.method() === 'POST' && r.url().includes('/bd-achat')) postsAchat += 1; });
+
     await page.goto(base + '/bd-personnelle.html');
-    ok(`${tag} offres : boutons vers la demande courte`, (await page.$$('a[href="demande-bd.html?offre=297"]')).length >= 2 && (await page.$$('a[href="demande-bd.html?offre=891"]')).length >= 2);
+    ok(`${tag} offres : boutons vers l’achat de la bonne offre`, (await page.$$('a[href="achat-bd?offre=297"]')).length >= 2 && (await page.$$('a[href="achat-bd?offre=891"]')).length >= 2 && (await page.$$('a[href*="demande-bd"]')).length === 0);
     ok(`${tag} offres : pas de débordement`, (await deborde()) <= 0);
 
-    await page.goto(base + '/demande-bd.html?offre=891');
-    ok(`${tag} demande : offre préselectionnée`, await page.isChecked('input[name=offre][value="891"]'));
-    await page.click('button[type=submit]');
-    ok(`${tag} demande : envoi vide refusé`, (await page.$$('#bdi-errors li')).length === 6);
-    await page.fill('#bdi-prenoms', 'Test'); await page.fill('#bdi-nom', 'Synthétique'); await page.fill('#bdi-email', 'test.synthetique@example.invalid');
-    await page.fill('#bdi-whatsapp', '0692000000'); await page.check('#bdi-declaration'); await page.check('#bdi-consentement');
-    await page.click('button[type=submit]');
-    ok(`${tag} demande : WhatsApp sans indicatif refusé`, (await page.textContent('#bdi-errors')).includes('indicatif'));
-    await page.fill('#bdi-whatsapp', '+262 692 00 00 00');
-    await page.click('button[type=submit]');
-    await page.waitForSelector('#bdi-done', { state: 'visible' });
-    const ref = await page.textContent('#bdi-ref');
-    ok(`${tag} demande : formulaire masqué après l’envoi`, !(await page.isVisible('#bdi-form')));
-    ok(`${tag} demande : enregistrée, référence visible`, /^INT-891-\d{8}-[A-Z2-9]{6}$/.test(ref), ref);
-    ok(`${tag} demande : pas de débordement`, (await deborde()) <= 0);
-    await page.screenshot({ path: `${OUT}/demande-${vp.nom}-${paiements ? 'ouvert' : 'ferme'}.png`, fullPage: true });
-
-    const conf = await admin(base, { action: 'confirmer', interet: ref });
-    const lien = conf.lienPaiement.replace('https://younousjonas.com', base);
-    await page.goto(lien);
-    await page.waitForSelector('#bdp-resume', { state: 'visible' });
-    ok(`${tag} paiement : jeton retiré de la barre d’adresse`, !page.url().includes('#t='));
-    ok(`${tag} paiement : récapitulatif 891,00 €`, (await page.textContent('#bdp-montant')).includes('891,00'));
+    await page.goto(base + '/achat-bd?offre=891');
+    await page.waitForSelector('#bda-resume', { state: 'visible' });
+    ok(`${tag} achat : offre préselectionnée, montant du serveur 891,00 €`, await page.isChecked('input[name=offre][value="891"]') && (await page.textContent('#bda-montant')).includes('891,00'));
     if(!paiements){
-      ok(`${tag} paiement : « pas encore ouvert », Stripe.js non chargé`, await page.isVisible('#bdp-indisponible') && !(await page.evaluate(() => !!window.Stripe)));
-      await page.screenshot({ path: `${OUT}/paiement-ferme-${vp.nom}.png`, fullPage: true });
-      await page.goto(base + '/paiement-bd.html#t=' + 'A'.repeat(43));
-      await page.waitForSelector('#bdp-invalide', { state: 'visible' });
-      ok(`${tag} paiement : lien invalide → message générique`, true);
+      await page.waitForSelector('#bda-ferme', { state: 'visible' });
+      ok(`${tag} achat fermé : « pas encore ouvert », aucun formulaire, Stripe.js non chargé`, !(await page.isVisible('#bda-form')) && !(await page.evaluate(() => !!window.Stripe)));
+      ok(`${tag} achat fermé : pas de débordement`, (await deborde()) <= 0);
+      await page.screenshot({ path: `${OUT}/achat-ferme-${vp.nom}.png`, fullPage: true });
+      await page.check('input[name=offre][value="297"]');
+      await page.waitForFunction(() => document.getElementById('bda-montant').textContent.includes('297,00'));
+      ok(`${tag} achat fermé : changement d’offre, adresse mise à jour`, page.url().endsWith('/achat-bd?offre=297'));
+      ok(`${tag} achat fermé : aucune donnée envoyée`, postsAchat === 0 && (await admin(base, { action: 'lister' })).commandes.length === 0);
     } else {
+      await page.waitForSelector('#bda-form', { state: 'visible' });
+      await page.click('#bda-form button[type=submit]');
+      ok(`${tag} achat : envoi vide refusé dans la page`, (await page.$$('#bda-errors li')).length === 6 && postsAchat === 0);
+      await page.fill('#bda-prenoms', 'Test'); await page.fill('#bda-nom', 'Synthétique'); await page.fill('#bda-email', 'test.synthetique@example.invalid');
+      await page.fill('#bda-whatsapp', '0692000000'); await page.check('#bda-declaration'); await page.check('#bda-consentement');
+      await page.click('#bda-form button[type=submit]');
+      ok(`${tag} achat : WhatsApp sans indicatif refusé`, (await page.textContent('#bda-errors')).includes('indicatif'));
+      await page.fill('#bda-whatsapp', '+262 692 00 00 00');
+      await page.dblclick('#bda-form button[type=submit]');
       await page.waitForFunction(() => window.__stripe && window.__stripe.monte);
       const st = await page.evaluate(() => window.__stripe);
-      ok(`${tag} paiement : Checkout intégré monté (méthode actuelle, secret client du serveur)`, st.appels[0] === 'createEmbeddedCheckoutPage' && st.pk === 'pk_test_e2e_factice' && /^cs_test_e2e_secret_/.test(st.secret) && st.monte === '#bdp-checkout');
-      await page.screenshot({ path: `${OUT}/paiement-ouvert-${vp.nom}.png`, fullPage: true });
+      ok(`${tag} paiement : Checkout intégré monté sur la même page (secret client du serveur)`, st.appels[0] === 'createEmbeddedCheckoutPage' && st.pk === 'pk_test_e2e_factice' && /^cs_test_e2e_secret_/.test(st.secret) && st.monte === '#bda-checkout');
+      ok(`${tag} paiement : double clic → un seul envoi, une seule session`, postsAchat === 1 && (await fetch(base + '/__test/stripe').then((r) => r.json())).sessions === 1);
+      ok(`${tag} paiement : formulaire masqué, référence de commande affichée`, !(await page.isVisible('#bda-form')) && /^CMD-891-\d{8}-[A-Z2-9]{6}$/.test(await page.textContent('#bda-ref')));
+      ok(`${tag} paiement : pas de débordement`, (await deborde()) <= 0);
+      await page.screenshot({ path: `${OUT}/achat-ouvert-${vp.nom}.png`, fullPage: true });
+      await page.goto(base + '/mon-album'); await page.waitForSelector('#bde-perdu', { state: 'visible' });
+      ok(`${tag} avant paiement vérifié : aucun questionnaire`, !(await page.isVisible('#bde-espace')));
       // Retour avant webhook : jamais de succès sur simple redirection
       const liste = await admin(base, { action: 'lister' });
       const cmd = liste.commandes.find((c) => c.statut === 'checkout_ouvert');

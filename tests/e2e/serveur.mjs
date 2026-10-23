@@ -14,15 +14,21 @@ const origine = `http://localhost:${PORT}`;
 const env = { BD_SITE_URL: origine, BD_ADMIN_TOKEN_SHA256: crypto.createHash('sha256').update('admin-e2e').digest('hex'), BD_STRIPE_WEBHOOK_SECRET: 'whsec_e2e', BD_ADMIN_EMAIL: 'admin@example.invalid', BD_LINK_SECRET: 'secret-de-lien-e2e-0123456789abcdef0123' };
 if(PAIEMENTS) Object.assign(env, { BD_PAYMENTS_ENABLED: 'true', BD_STRIPE_SECRET_KEY: 'sk_test_e2e_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_test_e2e_factice' });
 const envoyeur = envoyeurCapture();
-let n = 0;
+// Stripe simulé, idempotent comme le vrai : même clé d'idempotence → même session.
+let n = 0; const parCle = new Map();
 const d = { store: magasinMemoire(), cfg: lireConfig(env), now: Date.now, envoyeur, journal: () => {},
-  fetchFn: async () => { n += 1; return new Response(JSON.stringify({ id: 'cs_test_E2ESESSION' + String(n).padStart(6, '0'), client_secret: 'cs_test_e2e_secret_' + n, livemode: false }), { status: 200 }); } };
-const routes = { 'bd-interet': H.handlerInteret(d), 'bd-admin': H.handlerAdmin(d), 'bd-paiement': H.handlerPaiement(d), 'bd-stripe-webhook': H.handlerWebhook(d), 'bd-acces': H.handlerAcces(d), 'bd-questionnaire': H.handlerQuestionnaire(d) };
+  fetchFn: async (url, init) => {
+    const k = init.headers['idempotency-key'];
+    if(!parCle.has(k)){ n += 1; parCle.set(k, { id: 'cs_test_E2ESESSION' + String(n).padStart(6, '0'), client_secret: 'cs_test_e2e_secret_' + n, livemode: false }); }
+    return new Response(JSON.stringify(parCle.get(k)), { status: 200 });
+  } };
+const routes = { 'bd-interet': H.handlerInteret(d), 'bd-achat': H.handlerAchat(d), 'bd-admin': H.handlerAdmin(d), 'bd-paiement': H.handlerPaiement(d), 'bd-stripe-webhook': H.handlerWebhook(d), 'bd-acces': H.handlerAcces(d), 'bd-questionnaire': H.handlerQuestionnaire(d) };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon' };
 http.createServer(async (req, res) => {
   const url = new URL(req.url, origine);
   const chunks = []; for await (const c of req) chunks.push(c);
   const corps = Buffer.concat(chunks);
+  if(url.pathname === '/__test/stripe'){ res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ sessions: n })); }
   if(url.pathname === '/__test/outbox'){ await H.executerFile(d); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(envoyeur.envoyes)); }
   const m = url.pathname.match(/^\/\.netlify\/functions\/([a-z-]+)$/);
   if(m && routes[m[1]]){

@@ -8,5 +8,6 @@
   X-Robots-Tag: noindex, nofollow
   Referrer-Policy: no-referrer
   Cache-Control: no-store
-/demande-bd*
-  Referrer-Policy: strict-origin-when-cross-origin
+/achat-bd*
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
