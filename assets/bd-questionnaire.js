@@ -393,7 +393,10 @@
   }
   function onSubmit(e){
     e.preventDefault();
+    // Sauvegarde immédiate de la dernière saisie : un envoi refusé (champ manquant)
+    // ou un échec réseau ne doit rien faire perdre. Un envoi réussi l'efface ensuite.
     clearTimeout(saveTimer);
+    if(storageOk && !sent && S.draftKey) saveDraft();
     var vals = payloadValues(collect());
     var problems = validate(vals);
     if(problems.length){ showProblems(problems); return; }
