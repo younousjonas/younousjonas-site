@@ -37,9 +37,10 @@ export const DUREES = {
 };
 export const UTILISATIONS_MAX_LIEN = 10;
 
-// Fournisseurs de courriel pris en charge par la file d'envoi. Aucun pour l'instant :
-// le mode live reste donc fermé (une confirmation de paiement réel doit pouvoir partir).
-export const FOURNISSEURS_COURRIEL = new Set();
+// Fournisseurs de courriel pris en charge par la file d'envoi. « make » : webhook Make → Gmail
+// (voir outbox.mjs). Sans fournisseur valide, le mode live reste fermé : une confirmation de
+// paiement réel doit pouvoir partir.
+export const FOURNISSEURS_COURRIEL = new Set(['make']);
 
 // Lecture des variables d'environnement. Aucune valeur secrète n'est jamais renvoyée ni journalisée.
 export function lireConfig(env = process.env){
@@ -57,6 +58,11 @@ export function lireConfig(env = process.env){
   const secretLien = env.BD_LINK_SECRET || '';
   if(secretLien.length < 32) raisons.push('BD_LINK_SECRET absente ou trop courte (32 caractères au moins)');
   const mailProvider = env.BD_MAIL_PROVIDER || 'none';
+  const makeUrl = env.BD_MAKE_WEBHOOK_URL || '';
+  const makeCle = env.BD_MAKE_WEBHOOK_KEY || '';
+  if(mailProvider === 'make' && (!/^https:\/\/hook\.[a-z0-9]+\.make\.com\/[A-Za-z0-9]+$/.test(makeUrl) || makeCle.length < 32)){
+    raisons.push('BD_MAIL_PROVIDER=make sans BD_MAKE_WEBHOOK_URL ou BD_MAKE_WEBHOOK_KEY valides');
+  }
   if(mode === 'live' && env.BD_PAYMENTS_LIVE_CONFIRMED !== 'oui') raisons.push('mode live sans BD_PAYMENTS_LIVE_CONFIRMED=oui');
   if(mode === 'live' && !FOURNISSEURS_COURRIEL.has(mailProvider)) raisons.push('mode live sans fournisseur de courriel branché');
   const site = (env.BD_SITE_URL || env.URL || 'https://younousjonas.com').replace(/\/+$/, '');
@@ -78,6 +84,8 @@ export function lireConfig(env = process.env){
     // par Stripe a été vérifié sur le compte (BD_STRIPE_RECEIPTS_CONFIRMED=oui).
     recuStripe: env.BD_STRIPE_RECEIPTS_CONFIRMED === 'oui',
     mailProvider,
+    makeUrl,
+    makeCle,
     adminEmail: env.BD_ADMIN_EMAIL || '',
   };
 }

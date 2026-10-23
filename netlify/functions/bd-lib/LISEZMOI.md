@@ -36,7 +36,8 @@ Décision de Younous du 23-10-2026 : plus de demande d'intérêt ni de validatio
    - La clé d'idempotence transmise au fournisseur est l'identifiant du message, stable d'une reprise à l'autre.
    - 6 essais (1 min, 5 min, 15 min, 1 h, 4 h, 12 h), puis l'état `echec`, visible.
    - Aucun lien en clair n'est stocké.
-   - **Aucun fournisseur de courriel n'est branché** : les messages restent `en_attente_fournisseur`.
+   - **Fournisseur « make »** (`BD_MAIL_PROVIDER=make`) : chaque message est posté au webhook du scénario Make « BD personnelle — confirmation transactionnelle → Gmail (file du site) », qui l'envoie par la connexion Gmail existante (`younousjonas@gmail.com`). Le scénario vérifie la clé partagée, dédoublonne sur l'identifiant du message (magasin Make « BD — confirmations envoyées (anti-doublon) ») et répond en JSON : 200 `{ok:true,id}` (envoyé ou déjà envoyé), 403 (clé refusée, reprise), 422 (destinataire refusé, message `annule`). Hors mode live, seul `younousjonas@gmail.com` reçoit : toute autre adresse est refusée par le scénario. Toute réponse sans `{ok:true}` (dont le « Accepted » d'un scénario désactivé) est un échec à reprendre. Le scénario est confidentiel : Make ne garde pas le contenu des messages (le lien personnel) dans son historique.
+   - Sans fournisseur valide, les messages restent `en_attente_fournisseur`.
 
 ## Stockage (Netlify Blobs), séparé par contexte
 
@@ -69,7 +70,9 @@ Décision de Younous du 23-10-2026 : plus de demande d'intérêt ni de validatio
 | `BD_ADMIN_TOKEN_SHA256` | **empreinte** SHA-256 du jeton d'administration (le jeton lui-même n'est stocké nulle part) | absente : admin fermé |
 | `BD_SITE_URL` | URL publique pour les liens | `URL` de Netlify |
 | `BD_ADMIN_EMAIL` | destinataire des alertes internes | `hello@younousjonas.com` dans les messages |
-| `BD_MAIL_PROVIDER` | fournisseur de courriel ; aucun n'est pris en charge pour l'instant, donc le mode live reste fermé | `none` |
+| `BD_MAIL_PROVIDER` | fournisseur de courriel : `make` (seul pris en charge) ; sans lui, le mode live reste fermé | `none` |
+| `BD_MAKE_WEBHOOK_URL` | adresse du webhook Make du scénario de confirmation (`https://hook.<zone>.make.com/…`) | absente : fournisseur invalide, paiement fermé si `make` est déclaré |
+| `BD_MAKE_WEBHOOK_KEY` | clé partagée (32 caractères au moins) vérifiée par le scénario Make | absente : idem |
 
 Les clés génériques du coaching (`STRIPE_SECRET_KEY`, etc.) ne sont jamais lues par ces fonctions. Toute clé hors du mode choisi ferme le paiement.
 
@@ -103,6 +106,6 @@ curl -s … -d '{"action":"relancer-envoi","id":"MSG-…"}'
 
 ## Tests
 
-- `npm test` : 45 tests du parcours et 7 tests de garde du stockage. Achat direct (prix serveur, fermé sans capture, double clic, clé réutilisée, limites), concurrence et pannes injectées, reprises de la file, coordonnées corrigées avant paiement, retour après échec ou expiration. L'adaptateur refuse les ETag absents, les conditions d'écriture invalides et les succès de stockage non confirmés.
+- `npm test` : 49 tests du parcours (dont 4 du fournisseur « make ») et 7 tests de garde du stockage. Achat direct (prix serveur, fermé sans capture, double clic, clé réutilisée, limites), concurrence et pannes injectées, reprises de la file, coordonnées corrigées avant paiement, retour après échec ou expiration. L'adaptateur refuse les ETag absents, les conditions d'écriture invalides et les succès de stockage non confirmés.
 - `CHROMIUM_PATH=… PLAYWRIGHT_GLOBAL=$(npm root -g) node tests/e2e/e2e.mjs <dossier des captures, hors du dépôt>` : 66 vérifications navigateur (offres, achat fermé et ouvert, double clic, aucun questionnaire avant paiement, retour, espace, récupération), sur un serveur local avec les vraies fonctions, Stripe simulé, sans réseau.
 - Un vrai test Stripe est **bloqué** tant que les clés de test `BD_*` n'existent pas.

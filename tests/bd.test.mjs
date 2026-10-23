@@ -8,7 +8,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { lireConfig } from '../netlify/functions/bd-lib/config.mjs';
 import { magasinMemoire, magasinAiguille, plan, contexteDeploiement, adapter, maj, creerSiNouveau } from '../netlify/functions/bd-lib/store.mjs';
-import { envoyeurCapture, envoyeurAucun, ESSAIS_MAX, VERROU_MS, mettreEnFile } from '../netlify/functions/bd-lib/outbox.mjs';
+import { envoyeurCapture, envoyeurAucun, envoyeurMake, texteEnHtml, ESSAIS_MAX, VERROU_MS, mettreEnFile } from '../netlify/functions/bd-lib/outbox.mjs';
+import { choisirEnvoyeur } from '../netlify/functions/bd-lib/deps.mjs';
 import { signerPourTest } from '../netlify/functions/bd-lib/stripe.mjs';
 import { QUESTIONNAIRES } from '../netlify/functions/bd-lib/questionnaires.mjs';
 import { handlerInteret, handlerAchat, handlerAdmin, handlerPaiement, handlerWebhook, handlerAcces, handlerQuestionnaire, executerFile } from '../netlify/functions/bd-lib/handlers.mjs';
@@ -999,4 +1000,91 @@ test('page de retour : échec/expiration affichés avec reprise de la bonne offr
     assert.match(aide.textContent, /Aucun achat n’est confirmé/);
     assert.equal(aide.liens[0].href, '/achat-bd?offre=891');
   }
+});
+
+// ---------- Fournisseur « make » (webhook Make → Gmail) ----------
+const MAKE_URL = 'https://hook.eu1.make.com/abcdefghijklmnopqrstuvwxyz012345';
+const MAKE_CLE = 'cle-make-de-test-0123456789abcdefghijkl';
+
+// Scénario Make simulé : dédoublonnage sur l'identifiant, liste blanche hors live, réponses JSON.
+function makeSimule({ autorise = 'younousjonas@gmail.com', reponse } = {}){
+  const recus = []; const envoyes = new Set(); const gmail = [];
+  const fetchFn = async (url, init) => {
+    assert.equal(url, MAKE_URL); assert.equal(init.method, 'POST');
+    const b = JSON.parse(init.body); recus.push(b);
+    if(reponse) return reponse(b);
+    const j = (status, corps) => new Response(JSON.stringify(corps), { status, headers: { 'content-type': 'application/json' } });
+    if(b.cle !== MAKE_CLE) return j(403, { ok: false, erreur: 'cle_refusee' });
+    if(envoyes.has(b.id)) return j(200, { ok: true, id: b.id, deja: true });
+    if(b.mode !== 'live' && b.to.trim().toLowerCase() !== autorise) return j(422, { ok: false, erreur: 'destinataire_non_autorise' });
+    gmail.push(b); envoyes.add(b.id);
+    return j(200, { ok: true, id: b.id });
+  };
+  return { fetchFn, recus, gmail };
+}
+
+test('configuration make : URL et clé exigées ; live ouvert seulement avec un fournisseur valide', () => {
+  const sansUrl = lireConfig(env({ BD_MAIL_PROVIDER: 'make' }));
+  assert.equal(sansUrl.paiementsActifs, false);
+  assert.ok(sansUrl.raisonsInactif.some((r) => r.includes('BD_MAKE_WEBHOOK_URL')));
+  assert.equal(lireConfig(env({ BD_MAIL_PROVIDER: 'make', BD_MAKE_WEBHOOK_URL: 'https://exemple.invalid/x', BD_MAKE_WEBHOOK_KEY: MAKE_CLE })).paiementsActifs, false);
+  assert.equal(lireConfig(env({ BD_MAIL_PROVIDER: 'make', BD_MAKE_WEBHOOK_URL: MAKE_URL, BD_MAKE_WEBHOOK_KEY: 'courte' })).paiementsActifs, false);
+  const test_ = lireConfig(env({ BD_MAIL_PROVIDER: 'make', BD_MAKE_WEBHOOK_URL: MAKE_URL, BD_MAKE_WEBHOOK_KEY: MAKE_CLE }));
+  assert.equal(test_.paiementsActifs, true);
+  assert.equal(choisirEnvoyeur(test_).nom, 'make');
+  assert.equal(choisirEnvoyeur(lireConfig(env())).nom, 'aucun');
+  const liveEnv = { BD_PAYMENTS_MODE: 'live', BD_STRIPE_SECRET_KEY: 'sk_live_x', BD_STRIPE_PUBLISHABLE_KEY: 'pk_live_x', BD_MAIL_PROVIDER: 'make', BD_MAKE_WEBHOOK_URL: MAKE_URL, BD_MAKE_WEBHOOK_KEY: MAKE_CLE };
+  assert.equal(lireConfig(env(liveEnv)).paiementsActifs, false, 'live sans confirmation explicite');
+  assert.equal(lireConfig(env({ ...liveEnv, BD_PAYMENTS_LIVE_CONFIRMED: 'oui' })).paiementsActifs, true);
+});
+
+test('make : confirmation envoyée une fois, reprise sans doublon, HTML échappé avec lien cliquable', async () => {
+  const mk = makeSimule({ autorise: INTERET_OK.email });
+  const m = monde({ envoyeur: envoyeurMake({ url: MAKE_URL, cle: MAKE_CLE, mode: 'test', fetchFn: mk.fetchFn }) });
+  await commandePayee(m, '891');
+  const bilan = await executerFile(m.d);
+  assert.equal(bilan.envoyes, 1);
+  assert.equal(mk.gmail.length, 1);
+  const b = mk.gmail[0];
+  assert.equal(b.to, INTERET_OK.email); assert.equal(b.mode, 'test'); assert.match(b.id, /^MSG-confirmation-/);
+  assert.match(b.sujet, /Mon histoire en BD/);
+  assert.match(b.html, /<a href="https:\/\/younousjonas\.com\/mon-album#cle=[A-Za-z0-9_-]{43}">/);
+  assert.match(b.html, /891,00 €/);
+  // Un second passage n'envoie rien de plus ; un rejeu forcé du même message est dédoublonné par Make.
+  assert.equal((await executerFile(m.d)).envoyes, 0);
+  await m.d.envoyeur.envoyer({ to: b.to, sujet: b.sujet, texte: 'x', idempotencyKey: b.id });
+  assert.equal(mk.gmail.length, 1);
+});
+
+test('make : destinataire refusé en recette → annulé ; réponse sans {ok:true} → reprise', async () => {
+  const mk = makeSimule();
+  const m = monde({ envoyeur: envoyeurMake({ url: MAKE_URL, cle: MAKE_CLE, mode: 'test', fetchFn: mk.fetchFn }) });
+  await commandePayee(m);
+  const bilan = await executerFile(m.d);
+  assert.equal(bilan.annules, 1); assert.equal(mk.gmail.length, 0);
+  // Scénario désactivé : Make répond « Accepted » en texte ; rien n'est tenu pour envoyé.
+  const accepte = makeSimule({ reponse: () => new Response('Accepted', { status: 200 }) });
+  const m2 = monde({ envoyeur: envoyeurMake({ url: MAKE_URL, cle: MAKE_CLE, mode: 'test', fetchFn: accepte.fetchFn }) });
+  await commandePayee(m2);
+  const b2 = await executerFile(m2.d);
+  assert.equal(b2.envoyes, 0);
+  const [cle] = await m2.d.store.list('ob/');
+  const it = await m2.d.store.getJSON(cle);
+  assert.equal(it.statut, 'a_envoyer'); assert.match(it.derniereErreur, /make_reponse_200/);
+  // Mauvaise clé : 403, reprise (pas d'annulation silencieuse).
+  const m3 = monde({ envoyeur: envoyeurMake({ url: MAKE_URL, cle: 'mauvaise-cle-0123456789abcdefghijklmn', mode: 'test', fetchFn: makeSimule().fetchFn }) });
+  await commandePayee(m3);
+  const b3 = await executerFile(m3.d);
+  assert.equal(b3.envoyes, 0); assert.equal(b3.annules, 0);
+  // Destinataire absent (alerte sans BD_ADMIN_EMAIL) : erreur définitive, aucun appel.
+  const vide = makeSimule();
+  await assert.rejects(() => envoyeurMake({ url: MAKE_URL, cle: MAKE_CLE, mode: 'test', fetchFn: vide.fetchFn }).envoyer({ to: '', sujet: 's', texte: 't', idempotencyKey: 'MSG-x' }), /destinataire_absent/);
+  assert.equal(vide.recus.length, 0);
+});
+
+test('texteEnHtml : échappe le HTML, garde les retours à la ligne', () => {
+  const h = texteEnHtml('Bonjour <b>Léa</b> & "toi"\nhttps://younousjonas.com/mon-album#cle=abc');
+  assert.ok(h.includes('&lt;b&gt;Léa&lt;/b&gt; &amp; &quot;toi&quot;<br>'));
+  assert.ok(h.includes('<a href="https://younousjonas.com/mon-album#cle=abc">'));
+  assert.ok(!h.includes('<b>'));
 });

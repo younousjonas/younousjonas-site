@@ -45,6 +45,35 @@ export function envoyeurCapture(){
 // Erreur sans reprise possible (ex. accès révoqué entre-temps) : le message passe « annule ».
 export class ErreurDefinitive extends Error {}
 
+// Fournisseur « make » : chaque message est posté au webhook d'un scénario Make qui l'envoie par
+// la connexion Gmail existante (younousjonas@gmail.com). Le scénario dédoublonne sur
+// l'identifiant du message (magasin Make « BD — confirmations envoyées ») et répond en JSON :
+// 200 {ok:true, id} si le message part ou est déjà parti ; 403 clé refusée ; 422 destinataire
+// refusé (en recette, seule l'adresse autorisée reçoit). Toute autre réponse, dont le texte
+// « Accepted » d'un scénario désactivé, est un échec à reprendre : rien ne se déduit sans {ok:true}.
+export function envoyeurMake({ url, cle, mode, fetchFn = fetch, delaiMs = 25e3 }){
+  return {
+    nom: 'make', disponible: true,
+    async envoyer({ to, sujet, texte, idempotencyKey }){
+      if(!to) throw new ErreurDefinitive('destinataire_absent');
+      const corps = JSON.stringify({ cle, id: idempotencyKey, mode, to, sujet, html: texteEnHtml(texte) });
+      const r = await fetchFn(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: corps, signal: AbortSignal.timeout(delaiMs) });
+      let j = null;
+      try{ j = await r.json(); }catch{ j = null; }
+      if(r.status === 200 && j && j.ok === true && j.id === idempotencyKey) return { id: 'make:' + idempotencyKey };
+      if(r.status === 422) throw new ErreurDefinitive('make_destinataire_refuse');
+      throw new Error('make_reponse_' + r.status);
+    },
+  };
+}
+
+// Texte brut → HTML sûr : échappement, liens https cliquables, retours à la ligne conservés.
+export function texteEnHtml(texte){
+  const echappe = String(texte || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const liens = echappe.replace(/https:\/\/[^\s<]+/g, (u) => `<a href="${u}">${u}</a>`);
+  return '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5">' + liens.replace(/\n/g, '<br>\n') + '</div>';
+}
+
 // Traite les messages dus. composer(item) fabrique {to, sujet, texte} au moment de l'envoi ;
 // pour un même message, il doit produire le même contenu à chaque reprise.
 export async function traiterFile(store, { envoyeur, composer, maintenant, journal = () => {}, travailleur = crypto.randomUUID() }){
