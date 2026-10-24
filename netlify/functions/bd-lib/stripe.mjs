@@ -26,6 +26,8 @@ export async function creerSessionCheckout({ cfg, commande, offre, fetchFn, tent
   const p = new URLSearchParams();
   p.set('ui_mode', 'embedded_page');
   p.set('mode', 'payment');
+  // Identifiant stable du parcours ; le suffixe est tiré une seule fois, pas à chaque achat.
+  p.set('integration_identifier', 'komsa_bd_dnuojqhw');
   p.set('locale', 'fr');
   p.set('line_items[0][quantity]', '1');
   p.set('line_items[0][price_data][currency]', offre.devise);

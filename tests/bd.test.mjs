@@ -559,6 +559,7 @@ test('Checkout : moyens de paiement dynamiques du compte (aucun type imposé), c
   const p = new URLSearchParams(m.appelsStripe[0].init.body);
   assert.ok(![...p.keys()].some((k) => k.startsWith('payment_method_types')), 'aucun payment_method_types : Stripe propose carte, Klarna, PayPal… selon l’éligibilité');
   assert.equal(p.get('mode'), 'payment', 'paiement unique, pas d’abonnement');
+  assert.equal(p.get('integration_identifier'), 'komsa_bd_dnuojqhw', 'identifiant stable du parcours Checkout');
   assert.ok(![...p.keys()].some((k) => k.includes('subscription') || k.includes('installments')), 'aucun échéancier maison');
   assert.equal(p.get('payment_intent_data[description]'), `BD personnelle — ${commande}`);
 });
