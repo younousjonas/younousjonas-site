@@ -17,6 +17,7 @@ import { mettreEnFile, traiterFile, ErreurDefinitive } from './outbox.mjs';
 import { QUESTIONNAIRES } from './questionnaires.mjs';
 import { filtrerValeurs, verifier, mettreEnTexte } from './rendu.mjs';
 import { estMessageRetractation, composerRetractation, reprendreNotificationsRetractations } from './retractation.mjs';
+import { CONDITIONS } from './conditions.mjs';
 
 const ISO = (ms) => new Date(ms).toISOString();
 const GENERIQUE_LIEN = { erreur: 'lien_invalide', message: 'Ce lien n’est pas valable ou a expiré. Vous pouvez demander un nouveau lien.' };
@@ -111,6 +112,16 @@ export function composerMessage(item, c, lien, cfg){
       `Une question : ${cfg.adminEmail || 'younousjonas@gmail.com'}`, '',
       'Younous Jonas',
     ];
+    // Support conservable : reprendre la copie figée sur CETTE commande, jamais la page
+    // courante. Les commandes antérieures sans preuve CGV ne reçoivent pas d'acceptation fictive.
+    if(item.type === 'confirmation' && c.conditions && c.conditions.texte){
+      lignes.push('', 'CONDITIONS DE VOTRE COMMANDE — COPIE À CONSERVER',
+        `Version acceptée : ${c.conditions.version}`,
+        `Date de cette version : ${c.conditions.dateVersion}`,
+        `Acceptation enregistrée le : ${c.conditions.accepteesLe} (UTC)`,
+        `Empreinte SHA-256 de la copie : ${c.conditions.empreinteSha256}`,
+        '', c.conditions.texte);
+    }
     const sujet = item.type === 'confirmation'
       ? `Votre album « ${o.nom} » : paiement confirmé (réf. ${c.id})`
       : `Votre album « ${o.nom} » : nouveau lien personnel (réf. ${c.id})`;
@@ -157,6 +168,13 @@ export function handlerInteret(d){
 const CLE_ACHAT = /^[A-Za-z0-9_-]{22,64}$/;
 const ETATS_OUVERTS = ['creee', 'checkout_ouvert'];
 const ETATS_CHECKOUT_TERMINES = new Set(['echoue', 'expire']);
+const conditionsPubliques = () => {
+  const { texte, ...meta } = CONDITIONS;
+  return meta;
+};
+// Le statut est fixé dans la version du contrat. Un réglage paiement ne peut pas
+// transformer cette version préparatoire en contrat publié.
+const conditionsDisponibles = (cfg) => cfg.mode === 'test' || CONDITIONS.statut === 'publiee';
 
 export function handlerAchat(d){
   return protege(d, 'achat', async (req, context) => {
@@ -164,13 +182,13 @@ export function handlerAchat(d){
     if(req.method === 'GET'){
       const o = offreDe(new URL(req.url).searchParams.get('offre'));
       if(!o) return json(404, { erreur: 'offre_inconnue' });
-      return json(200, { code: o.code, nom: o.nom, libelle: o.libelle, montant: montantTexte(o.montant, o.devise), etape: o.etape, paiementDisponible: d.cfg.paiementsActifs });
+      return json(200, { code: o.code, nom: o.nom, libelle: o.libelle, montant: montantTexte(o.montant, o.devise), etape: o.etape, paiementDisponible: d.cfg.paiementsActifs && conditionsDisponibles(d.cfg), conditions: conditionsPubliques() });
     }
     if(req.method !== 'POST') return json(405, { erreur: 'methode' });
     if(!origineAutorisee(req, d.cfg)) return json(403, { erreur: 'origine' });
     const { corps, erreur } = await lireJSON(req, 10_000);
     if(erreur) return json(400, { erreur: 'requete' });
-    if(!d.cfg.paiementsActifs){
+    if(!d.cfg.paiementsActifs || !conditionsDisponibles(d.cfg)){
       d.journal('paiement_inactif', d.cfg.raisonsInactif.length + ' condition(s) manquante(s)');
       return json(503, { erreur: 'paiement_indisponible', message: 'Le paiement en ligne n’est pas encore ouvert. Aucune information n’a été enregistrée.' });
     }
@@ -184,18 +202,25 @@ export function handlerAchat(d){
     const whatsapp = normaliserWhatsapp(corps.whatsapp); if(!whatsapp) erreurs.push('whatsapp');
     if(corps.declarationWhatsapp !== true) erreurs.push('declarationWhatsapp');
     if(corps.consentement !== true) erreurs.push('consentement');
+    if(corps.conditionsAcceptees !== true) erreurs.push('conditionsAcceptees');
     const cle = String(corps.cle || ''); if(!CLE_ACHAT.test(cle)) erreurs.push('cle');
     if(erreurs.length) return json(422, { erreur: 'champs', champs: erreurs });
+    if(corps.versionConditions !== CONDITIONS.version) return json(409, { erreur: 'conditions_actualisees', message: 'Les conditions de cette page ne sont plus à jour. Consultez la version affichée et acceptez-la avant de poursuivre.' });
     if(!(await limiter(s, 'achat-email', email, 5, 3600e3, maintenant))) return json(429, { erreur: 'trop_de_demandes' });
 
     // Clé d'achat → commande, en une écriture « si nouveau » ; une clé ne sert qu'à une offre et une adresse.
     const kA = 'achat/' + hacher(cle);
-    await creerSiNouveau(s, kA, { commande: reference('CMD', o.code, maintenant), offre: o.code, email: hacher(email), creeLe: ISO(maintenant) });
+    await creerSiNouveau(s, kA, { commande: reference('CMD', o.code, maintenant), offre: o.code, email: hacher(email), creeLe: ISO(maintenant), versionConditions: CONDITIONS.version, empreinteConditions: CONDITIONS.empreinteSha256 });
     const a = await s.getJSON(kA);
     if(!a || a.offre !== o.code || a.email !== hacher(email)) return json(409, { erreur: 'cle_reutilisee', message: 'Rechargez la page pour recommencer.' });
+    if(a.versionConditions !== CONDITIONS.version || a.empreinteConditions !== CONDITIONS.empreinteSha256) return json(409, { erreur: 'conditions_actualisees', message: 'Les conditions de cette page ne sont plus à jour. Consultez la version affichée et acceptez-la avant de poursuivre.' });
     const id = a.commande;
-    const neuve = { id, offre: o.code, montant: o.montant, devise: o.devise, prenoms, nom, email, whatsapp, declarationWhatsapp: true, consentement: true, source: 'achat', statut: 'creee', creeLe: ISO(maintenant), sessionsCheckout: [], historique: [] };
+    // Seule l'acceptation des CGV est constatée ici. Aucun accord photo, éditorial ou de
+    // commencement anticipé ne découle de cette case, du paiement ou de l'accès au questionnaire.
+    const conditions = { ...CONDITIONS, accepteesLe: a.creeLe };
+    const neuve = { id, offre: o.code, montant: o.montant, devise: o.devise, prenoms, nom, email, whatsapp, declarationWhatsapp: true, consentement: true, conditions, source: 'achat', statut: 'creee', creeLe: ISO(maintenant), sessionsCheckout: [], historique: [] };
     trace(neuve, maintenant, 'commande_creee');
+    trace(neuve, Date.parse(a.creeLe), 'conditions_acceptees', { version: conditions.version, dateVersion: conditions.dateVersion, empreinteSha256: conditions.empreinteSha256 });
     await creerSiNouveau(s, CLE(id), neuve);
     await maj(s, 'idx/email/' + hacher(email), (idx) => {
       const v = idx || { commandes: [] };
@@ -206,11 +231,13 @@ export function handlerAchat(d){
     // L'adresse et l'offre restent celles de l'index d'achat ; aucune commande réglée n'est modifiée.
     const { valeur: c } = await majCommande(s, id, (x) => {
       if(!ETATS_OUVERTS.includes(x.statut)) return undefined;
+      if(x.conditions?.version !== CONDITIONS.version || x.conditions?.empreinteSha256 !== CONDITIONS.empreinteSha256) return undefined;
       if(x.prenoms === prenoms && x.nom === nom && x.whatsapp === whatsapp) return undefined;
       Object.assign(x, { prenoms, nom, whatsapp }); trace(x, maintenant, 'coordonnees_actualisees'); return x;
     });
     if(payee(c)) return json(409, { erreur: 'deja_paye', reference: id });
     if(!ETATS_OUVERTS.includes(c.statut)) return json(409, { erreur: 'etat' });
+    if(c.conditions?.version !== CONDITIONS.version || c.conditions?.empreinteSha256 !== CONDITIONS.empreinteSha256) return json(409, { erreur: 'conditions_actualisees', message: 'Rechargez la page pour consulter et accepter les conditions applicables.' });
 
     let sess;
     try{

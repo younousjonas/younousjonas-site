@@ -7,14 +7,15 @@
 (function(){
   'use strict';
   var API = '/.netlify/functions/bd-achat';
-  var form, errors, status, offre = null, cle = null, envoiEnCours = false;
+  var form, errors, status, offre = null, cle = null, conditions = null, envoiEnCours = false;
   var LIBELLES = {
     offre: 'L’album choisi', prenoms: 'Votre ou vos prénoms', nom: 'Votre nom',
     email: 'Une adresse électronique valide', whatsapp: 'Un numéro WhatsApp avec l’indicatif du pays (par exemple +262…)',
     declarationWhatsapp: 'La confirmation que ce numéro est joignable sur WhatsApp', consentement: 'Votre accord pour traiter la commande',
+    conditionsAcceptees: 'Votre acceptation des conditions de commande affichées',
     cle: 'Rechargez la page pour recommencer'
   };
-  var ZONES = { prenoms:'bda-q-prenoms', nom:'bda-q-nom', email:'bda-q-email', whatsapp:'bda-q-whatsapp', declarationWhatsapp:'bda-q-whatsapp', consentement:'bda-q-consentement' };
+  var ZONES = { prenoms:'bda-q-prenoms', nom:'bda-q-nom', email:'bda-q-email', whatsapp:'bda-q-whatsapp', declarationWhatsapp:'bda-q-whatsapp', consentement:'bda-q-consentement', conditionsAcceptees:'bda-q-conditions' };
   function $(id){ return document.getElementById(id); }
 
   function nouvelleCle(){
@@ -33,7 +34,8 @@
       action: 'commander', offre: offre, cle: cle,
       prenoms: form.prenoms.value.trim(), nom: form.nom.value.trim(), email: form.email.value.trim(),
       whatsapp: form.whatsapp.value.trim(), declarationWhatsapp: form.declarationWhatsapp.checked,
-      consentement: form.consentement.checked, siteweb: form.siteweb.value
+      consentement: form.consentement.checked, siteweb: form.siteweb.value,
+      conditionsAcceptees: form.conditionsAcceptees.checked, versionConditions: conditions && conditions.version
     };
   }
   function whatsappOk(t){ var s = t.replace(/[\s.\-()]/g, ''); if(s.indexOf('00') === 0) s = '+' + s.slice(2); return /^\+[1-9]\d{7,14}$/.test(s); }
@@ -43,6 +45,7 @@
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.email)) m.push('email');
     if(!whatsappOk(v.whatsapp)) m.push('whatsapp'); if(!v.declarationWhatsapp) m.push('declarationWhatsapp');
     if(!v.consentement) m.push('consentement');
+    if(!v.conditionsAcceptees || !v.versionConditions) m.push('conditionsAcceptees');
     return m;
   }
   function montrer(champs){
@@ -90,6 +93,10 @@
         if(x.r.status === 422 && x.b.champs){ status.textContent = ''; montrer(x.b.champs); return; }
         if(x.r.status === 503){ afficherFerme(); return; }
         if(x.r.status === 409 && x.b.erreur === 'deja_paye'){ erreur('Cette commande est déjà réglée. Votre lien personnel vous est transmis ; vous pouvez aussi ouvrir votre espace pour en demander un.'); return; }
+        if(x.r.status === 409 && x.b.erreur === 'conditions_actualisees'){
+          cle = nouvelleCle();
+          return choisir(offre).then(function(){ erreur('Les conditions ont été actualisées. Consultez la version affichée, puis cochez de nouveau la case si vous l’acceptez.'); });
+        }
         if(x.r.status === 409){ cle = nouvelleCle(); erreur('Cette page a expiré. Vérifiez vos informations et cliquez de nouveau.'); return; }
         erreur(x.r.status === 429 ? 'Trop d’essais depuis cette connexion. Réessayez dans une heure, ou écrivez à younousjonas@gmail.com.' : (x.b.message || 'Le paiement n’a pas pu s’ouvrir. Réessayez dans un moment.'));
       })
@@ -101,16 +108,24 @@
   function choisir(code){
     if(offre !== code) cle = nouvelleCle();         // une clé d'achat par offre
     offre = code;
+    conditions = null; form.conditionsAcceptees.checked = false; form.hidden = true;
     var r = document.querySelector('input[name=offre][value="' + code + '"]'); if(r) r.checked = true;
     var u = new URL(location.href); u.searchParams.set('offre', code); history.replaceState(null, '', u.pathname + u.search);
     return fetch(API + '?offre=' + encodeURIComponent(code), { credentials:'same-origin' })
       .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
       .then(function(b){
+        if(offre !== code) return;                 // une réponse ancienne ne remplace pas l'offre actuelle
         $('bda-libelle').textContent = b.libelle; $('bda-montant').textContent = b.montant; $('bda-resume').hidden = false;
+        if(!b.conditions || !b.conditions.version || !b.conditions.url){ afficherFerme(); return; }
+        conditions = b.conditions;
+        $('bda-conditions-version').textContent = 'version ' + conditions.version + ' du ' + conditions.dateVersion;
+        $('bda-conditions-page').href = conditions.page + '?version=' + encodeURIComponent(conditions.version);
+        $('bda-conditions-copie').href = conditions.url;
+        $('bda-conditions-preparatoires').hidden = conditions.statut !== 'preparatoire';
         if(b.paiementDisponible){ $('bda-ferme').hidden = true; form.hidden = false; }
         else afficherFerme();
       })
-      .catch(function(){ afficherFerme(); });
+      .catch(function(){ if(offre === code) afficherFerme(); });
   }
 
   function start(){

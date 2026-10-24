@@ -36,7 +36,16 @@ export async function creerSessionCheckout({ cfg, commande, offre, fetchFn, tent
   p.set('customer_email', commande.email);
   p.set('client_reference_id', commande.id);
   p.set('return_url', `${cfg.site}/paiement-bd-retour?session_id={CHECKOUT_SESSION_ID}`);
-  for(const [k, v] of Object.entries({ bd_commande: commande.id, bd_offre: offre.code, source: 'younousjonas.com/bd-personnelle' })){
+  const meta = { bd_commande: commande.id, bd_offre: offre.code, source: 'younousjonas.com/bd-personnelle' };
+  if(commande.conditions){
+    Object.assign(meta, {
+      bd_conditions_version: commande.conditions.version,
+      bd_conditions_date: commande.conditions.dateVersion,
+      bd_conditions_acceptees_le: commande.conditions.accepteesLe,
+      bd_conditions_sha256: commande.conditions.empreinteSha256,
+    });
+  }
+  for(const [k, v] of Object.entries(meta)){
     p.set(`metadata[${k}]`, v);
     p.set(`payment_intent_data[metadata][${k}]`, v);
   }

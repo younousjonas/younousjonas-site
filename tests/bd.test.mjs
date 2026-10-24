@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { lireConfig } from '../netlify/functions/bd-lib/config.mjs';
+import { CONDITIONS } from '../netlify/functions/bd-lib/conditions.mjs';
 import { magasinMemoire, magasinAiguille, plan, contexteDeploiement, adapter, maj, creerSiNouveau } from '../netlify/functions/bd-lib/store.mjs';
 import { envoyeurCapture, envoyeurAucun, envoyeurMake, texteEnHtml, ESSAIS_MAX, VERROU_MS, mettreEnFile } from '../netlify/functions/bd-lib/outbox.mjs';
 import { choisirEnvoyeur } from '../netlify/functions/bd-lib/deps.mjs';
@@ -60,9 +61,10 @@ const corpsDe = async (r) => r.json();
 const cookieDe = (r) => (r.headers.get('set-cookie') || '').split(';')[0];
 
 const INTERET_OK = { offre: '297', prenoms: 'Test', nom: 'Synthétique', email: 'test.synthetique@example.invalid', whatsapp: '+262 692 00 00 00', declarationWhatsapp: true, consentement: true };
+const ACHAT_OK = { ...INTERET_OK, conditionsAcceptees: true, versionConditions: CONDITIONS.version };
 let nCle = 0;
 const cleAchat = () => 'cle-achat-de-test-' + String(++nCle).padStart(8, '0');
-const achatReq = (corps = {}, opts) => req('POST', { action: 'commander', ...INTERET_OK, cle: cleAchat(), ...corps }, opts);
+const achatReq = (corps = {}, opts) => req('POST', { action: 'commander', ...ACHAT_OK, cle: cleAchat(), ...corps }, opts);
 
 // Achat direct : coordonnées + session Stripe en une étape. Renvoie la commande et sa session.
 async function commandeConfirmee(m, offre = '297', email = INTERET_OK.email){
@@ -120,7 +122,7 @@ test('achat : coordonnées vérifiées (WhatsApp avec indicatif et déclaration,
   const m = monde();
   const r = await handlerAchat(m.d)(req('POST', { action: 'commander', offre: '297' }));
   assert.equal(r.status, 422);
-  assert.deepEqual((await corpsDe(r)).champs.sort(), ['cle', 'consentement', 'declarationWhatsapp', 'email', 'nom', 'prenoms', 'whatsapp']);
+  assert.deepEqual((await corpsDe(r)).champs.sort(), ['cle', 'conditionsAcceptees', 'consentement', 'declarationWhatsapp', 'email', 'nom', 'prenoms', 'whatsapp']);
   assert.deepEqual((await corpsDe(await handlerAchat(m.d)(achatReq({ whatsapp: '0692000000' })))).champs, ['whatsapp']);
   assert.deepEqual((await corpsDe(await handlerAchat(m.d)(achatReq({ declarationWhatsapp: false })))).champs, ['declarationWhatsapp']);
   assert.deepEqual((await corpsDe(await handlerAchat(m.d)(achatReq({ offre: '100' })))).champs, ['offre']);
@@ -194,7 +196,7 @@ test('achat : session Embedded Checkout au montant serveur, ui_mode=embedded_pag
 
 test('achat : double clic et nouvel essai (même clé) → même commande et même session ; erreur Stripe sans détail ; commande payée refusée', async () => {
   const m = monde();
-  const corps = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+  const corps = { action: 'commander', ...ACHAT_OK, cle: cleAchat() };
   const r1 = await corpsDe(await handlerAchat(m.d)(req('POST', corps)));
   const r2 = await corpsDe(await handlerAchat(m.d)(req('POST', corps)));
   assert.equal(r1.reference, r2.reference); assert.equal(r1.clientSecret, r2.clientSecret);
@@ -298,7 +300,7 @@ test('confirmation : prénom, offre, montant, référence, étape, lien personne
   const { msg, jeton } = await lienDuMessage(m);
   assert.equal(msg.to, INTERET_OK.email);
   for(const attendu of ['Bonjour Test', 'Mon parcours en BD', '297,00 €', commande, 'Prochaine étape', SITE + '/mon-album#cle=']) assert.ok(msg.texte.includes(attendu), attendu);
-  assert.ok(!msg.texte.includes('reçu'), 'aucune promesse de reçu Stripe tant que BD_STRIPE_RECEIPTS_CONFIRMED n’est pas posé');
+  assert.ok(!msg.texte.includes('Votre reçu de paiement vous est adressé séparément par Stripe.'), 'aucune promesse de reçu Stripe tant que BD_STRIPE_RECEIPTS_CONFIRMED n’est pas posé');
   const mr = monde({ env: env({ BD_STRIPE_RECEIPTS_CONFIRMED: 'oui' }) });
   await commandePayee(mr);
   assert.ok((await lienDuMessage(mr)).msg.texte.includes('Votre reçu de paiement vous est adressé séparément par Stripe.'));
@@ -611,7 +613,7 @@ test('configuration : BD_LINK_SECRET exigé ; live fermé sans fournisseur de co
 
 test('achat concurrent (même clé) : une commande, une session ; panne après l’index → reprise sur la même commande', async () => {
   const m = monde({ store: lent() });
-  const corps = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+  const corps = { action: 'commander', ...ACHAT_OK, cle: cleAchat() };
   const rs = await Promise.all([1, 2, 3].map(() => handlerAchat(m.d)(req('POST', corps))));
   const refs = new Set();
   for(const r of rs){ if(r.status === 200) refs.add((await corpsDe(r)).reference); else assert.equal(r.status, 409); }
@@ -623,14 +625,18 @@ test('achat concurrent (même clé) : une commande, une session ; panne après l
   assert.equal((await m.d.store.getJSON('idx/email/' + sha(INTERET_OK.email))).commandes.length, 1);
   // panne à la création de la commande, après l'index de la clé d'achat : le nouvel essai la crée
   const m2 = monde({ store: magasinMemoire({ panne: panneUnique('commandes/') }) });
-  const corps2 = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+  const corps2 = { action: 'commander', ...ACHAT_OK, cle: cleAchat() };
+  const acceptationInitiale = new Date(m2.temps()).toISOString();
   assert.equal((await handlerAchat(m2.d)(req('POST', corps2))).status, 500, 'panne visible');
   assert.equal((await m2.d.store.list('commandes/')).length, 0);
+  m2.avancer(60_000);
   const r2 = await handlerAchat(m2.d)(req('POST', corps2));
   assert.equal(r2.status, 200);
   const index = (await m2.d.store.list('achat/')).length;
   assert.equal(index, 1);
-  assert.equal((await m2.d.store.list('commandes/'))[0], 'commandes/' + (await corpsDe(r2)).reference);
+  const commandeReprise = 'commandes/' + (await corpsDe(r2)).reference;
+  assert.equal((await m2.d.store.list('commandes/'))[0], commandeReprise);
+  assert.equal((await m2.d.store.getJSON(commandeReprise)).conditions.accepteesLe, acceptationInitiale, 'la reprise conserve l’acceptation reçue avant la panne');
 });
 
 test('webhook concurrent : même événement et événements frères simultanés → payée une fois, une confirmation', async () => {
@@ -907,7 +913,7 @@ test('file : A termine pendant que B, qui a repris le message, envoie encore →
 test('achat : après erreur Stripe, prénom/nom/WhatsApp corrigés sont conservés sans changer commande ni session', async () => {
   const options = { stripeEchec: true };
   const m = monde(options);
-  const corps = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+  const corps = { action: 'commander', ...ACHAT_OK, cle: cleAchat() };
   assert.equal((await handlerAchat(m.d)(req('POST', corps))).status, 502);
   const [cleCommande] = await m.d.store.list('commandes/');
   const avant = await m.d.store.getJSON(cleCommande);
@@ -938,7 +944,7 @@ test('retour : échec différé et expiration terminent l’attente ; événemen
     ['checkout.session.expired', 'expire', 'checkout_expire'],
   ]){
     const m = monde();
-    const corps = { action: 'commander', ...INTERET_OK, cle: cleAchat() };
+    const corps = { action: 'commander', ...ACHAT_OK, cle: cleAchat() };
     const achat = await corpsDe(await handlerAchat(m.d)(req('POST', corps)));
     const id = achat.reference; const sid = m.sessions[0];
     const nonPayee = sessionPayee(id, '297', { id: sid, payment_status: 'unpaid' });
