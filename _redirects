@@ -28,6 +28,7 @@
 /assets/bd-interet.js /404 404!
 /achat-bd /achat-bd.html 200
 /mon-album /mon-album.html 200
+/retractation-bd /retractation-bd.html 200
 /paiement-bd-retour /paiement-bd-retour.html 200
 # Fichiers du dépôt jamais servis : sources des fonctions Edge, dépendances, tests.
 /netlify/* /404 404!

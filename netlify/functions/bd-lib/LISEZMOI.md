@@ -13,7 +13,7 @@ Décision de Younous du 23-10-2026 : plus de demande d'intérêt ni de validatio
    - **Paiement ouvert** : prénoms, nom, adresse électronique, WhatsApp avec indicatif et déclaration, accord. Rien d'intime. Le serveur crée la commande au prix du catalogue, pour l'offre demandée (le montant envoyé par le navigateur est ignoré), ouvre la session Stripe, l'enregistre sur la commande, puis renvoie le secret client. Le Checkout se monte sur la même page.
    - **Double clic, nouvel essai** : la page tire une clé d'achat aléatoire à son chargement. L'index `achat/<empreinte>` (écriture « si nouveau ») lie cette clé à une seule commande, une offre et une adresse ; la clé d'idempotence Stripe `bd-cs-<commande>-achat` rend la même session. Une clé reprise avec une autre adresse ou une autre offre → 409.
    - **Abus** : pot de miel, origine contrôlée, 10 essais par heure par connexion, 5 par heure par adresse. Une commande déjà réglée → 409 `deja_paye`.
-   - Stripe Embedded Checkout, `ui_mode=embedded_page`, version d'API épinglée `2026-03-25.dahlia`, comptant intégral (`mode=payment`), sans `payment_method_types` (moyens du compte Run Coaching selon l'éligibilité : carte, Klarna, PayPal…), sans échéancier.
+   - Stripe Embedded Checkout, `ui_mode=embedded_page`, version d'API épinglée `2026-03-25.dahlia`, comptant intégral (`mode=payment`), sans échéancier marchand. Le paramètre `payment_method_configuration` impose la configuration dédiée aux albums ; `payment_method_types` n'est pas envoyé. Sans identifiant `pmc_…` valide, le paiement reste fermé et aucun appel Checkout n'utilise les moyens par défaut du compte.
 3. **Demandes d'intérêt déjà reçues** : conservées telles quelles dans `bd-interets-production`, lisibles par `bd-admin` (`lister`). `bd-interet` répond désormais 410 et n'enregistre plus rien ; les actions `confirmer` et `nouveau-lien-paiement` répondent 410.
 4. **Webhook** (`bd-stripe-webhook`). Il traite `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` et `checkout.session.expired`.
    - La signature est vérifiée, avec une tolérance de 5 minutes.
@@ -39,11 +39,25 @@ Décision de Younous du 23-10-2026 : plus de demande d'intérêt ni de validatio
    - **Fournisseur « make »** (`BD_MAIL_PROVIDER=make`) : chaque message est posté au webhook du scénario Make « BD personnelle — confirmation transactionnelle → Gmail (file du site) », qui l'envoie par la connexion Gmail existante (`younousjonas@gmail.com`). Le scénario vérifie la clé partagée, dédoublonne sur l'identifiant du message (magasin Make « BD — confirmations envoyées (anti-doublon) ») et répond en JSON : 200 `{ok:true,id}` (envoyé ou déjà envoyé), 403 (clé refusée, reprise), 422 (destinataire refusé, message `annule`). Hors mode live, seul `younousjonas@gmail.com` reçoit : toute autre adresse est refusée par le scénario. Toute réponse sans `{ok:true}` (dont le « Accepted » d'un scénario désactivé) est un échec à reprendre. Le scénario est confidentiel : Make ne garde pas le contenu des messages (le lien personnel) dans son historique.
    - Sans configuration complète du courriel (fournisseur, URL et clé Make valides, `BD_LINK_SECRET` d'au moins 32 caractères, `BD_ADMIN_EMAIL` valide), les messages restent `en_attente_fournisseur` sans consommer de tentative. Une fois la configuration complétée, la file reprend. Elle reste indépendante de `BD_PAYMENTS_ENABLED` : fermer les nouvelles ventes n'interrompt pas les confirmations déjà dues.
 
+## Rétractation en ligne
+
+`/retractation-bd` est accessible directement depuis les offres, l'achat et le pied de page de l'espace personnel, même sans session et lorsque les nouvelles ventes sont fermées. Le formulaire demande prénom(s), nom, adresse électronique choisie pour l'accusé et référence de commande **ou** autres indications permettant d'identifier le contrat. Aucun motif ni téléphone n'est exigé.
+
+Le premier bouton affiche un récapitulatif local ; seul **« Confirmer la rétractation »** transmet la déclaration à `POST /.netlify/functions/bd-retractation`. La déclaration et la date/heure de transmission constatée par le serveur sont enregistrées dans `retractations/` avant toute réponse de succès. L'accusé complet est affiché et téléchargeable en texte, puis transmis par la file Make, avec une notification séparée à `BD_ADMIN_EMAIL`. L'écran confirme l'enregistrement, jamais une réception du courriel déjà accomplie.
+
+La clé aléatoire de 256 bits du navigateur est hachée ; elle lie les reprises à la même déclaration et à la même empreinte de contenu. Une reprise identique conserve la date initiale et les deux identifiants de notification. La même clé avec un contenu différent est refusée sans révéler le dépôt précédent. Aucune information de commande n'est recherchée ou révélée à partir d'une adresse ou d'une référence : ces déclarations publiques restent à rapprocher humainement du dossier privé. Aucun paiement, accès ou statut de commande n'est modifié et aucun remboursement Stripe n'est déclenché.
+
+Les deux messages sont tentés immédiatement, en parallèle et sans traiter le reste de la file. Les indisponibilités du fournisseur laissent le dépôt acquis et les messages en reprise. Le passage planifié répare aussi une interruption entre l'enregistrement et la création des notifications. Les reprises et les envois concurrents utilisent les mêmes réservations et clés d'idempotence que les confirmations de paiement. Le contenu libre est échappé et ne crée pas de liens HTML actifs dans les accusés.
+
+Contrôles : même origine, JSON limité à 8 000 caractères, champs bornés, caractères de contrôle refusés, pot de miel, 10 nouveaux dépôts par heure et par connexion et 5 par adresse ; un dépôt identique repris n'est pas recompté. Les informations restent seulement en mémoire dans la page, sans stockage navigateur ni paramètres d'URL. L'adresse `younousjonas@gmail.com` demeure proposée si le formulaire n'est pas utilisable. Les données sont dans le magasin du mode actif ; garder le mode live pour traiter les déclarations réelles même lorsque `BD_PAYMENTS_ENABLED=false`.
+
+Fondement des libellés et du contenu de l'accusé : Code de la consommation, [L221-21](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053310520) et [D221-5](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053303365/2026-08-03), versions applicables depuis le 19 juin 2026. La réception de la déclaration ne préjuge pas de la qualification du contrat ni des modalités du remboursement.
+
 ## Stockage (Netlify Blobs), séparé par contexte
 
 - **Production** :
   - `bd-interets-production` conserve les demandes d'intérêt reçues avant le 23-10-2026. Plus rien n'y est écrit.
-  - `bd-commandes-production-test` et `bd-commandes-production-live` portent les commandes, jetons, sessions et la file d'envoi. Un paiement de test ne touche jamais les commandes réelles.
+  - `bd-commandes-production-test` et `bd-commandes-production-live` portent les commandes, jetons, sessions, déclarations de rétractation et la file d'envoi. Un paiement de test ne touche jamais les commandes réelles.
 - **Aperçus** (deploy-preview, branch-deploy, dev, contexte inconnu) : un magasin de déploiement (`getDeployStore`), visible de ce seul déploiement. Un aperçu n'ouvre jamais un magasin de production.
 - **Contexte retenu** : celui que Netlify passe à la fonction (`context.deploy.context`), sinon `CONTEXT`. Tout ce qui n'est pas `production` est traité comme un aperçu.
 
@@ -64,6 +78,7 @@ Décision de Younous du 23-10-2026 : plus de demande d'intérêt ni de validatio
 | `BD_STRIPE_SECRET_KEY` | clé serveur Run Coaching **dédiée aux BD**, secrète (`sk_test_…` / `sk_live_…`) ou restreinte (`rk_test_…` / `rk_live_…`), du mode choisi | absente |
 | `BD_STRIPE_PUBLISHABLE_KEY` | `pk_test_…` / `pk_live_…`, selon le mode | absente |
 | `BD_STRIPE_WEBHOOK_SECRET` | `whsec_…` de l'endpoint `/.netlify/functions/bd-stripe-webhook` | absente |
+| `BD_STRIPE_PAYMENT_METHOD_CONFIGURATION` | identifiant `pmc_…` de la configuration Stripe dédiée aux albums, du mode choisi ; obligatoire et transmis à chaque création Checkout | absente ou mal formée : paiement fermé |
 | `BD_STRIPE_API_VERSION` | version d'API épinglée | `2026-03-25.dahlia` |
 | `BD_LINK_SECRET` | secret (32 caractères au moins) qui dérive les liens personnels des messages | absente : paiement fermé |
 | `BD_STRIPE_RECEIPTS_CONFIRMED` | `oui` seulement après vérification que Stripe envoie bien les reçus sur ce compte ; ajoute la ligne « reçu » à la confirmation | ligne absente |
@@ -77,6 +92,10 @@ Décision de Younous du 23-10-2026 : plus de demande d'intérêt ni de validatio
 Les clés génériques du coaching (`STRIPE_SECRET_KEY`, etc.) ne sont jamais lues par ces fonctions. Toute clé hors du mode choisi ferme le paiement.
 
 Une clé restreinte s'utilise dans le même champ serveur. L'appel `POST /v1/checkout/sessions` exige le droit d'écriture sur les Checkout Sessions ; vérifier en recette les droits supplémentaires éventuellement demandés par Stripe pour les paramètres du catalogue. Ne jamais placer cette clé dans `BD_STRIPE_PUBLISHABLE_KEY`. Référence : https://docs.stripe.com/keys/restricted-api-keys.
+
+**Moyens de paiement BD, décision du 24-10-2026.** Utiliser une configuration Stripe dédiée, séparée du coaching : cartes et portefeuilles associés (Link, Apple Pay, Google Pay), PayPal, Alma et Klarna, selon l'activation effective du compte et l'éligibilité de l'acheteur. Désactiver le prélèvement SEPA et tous les autres moyens dans cette configuration. Stripe décide lesquels afficher pour une transaction donnée ; l'activation dans le tableau de bord ne garantit pas leur disponibilité pour tous les clients.
+
+Configuration de recette créée : `pmc_1UTuoECUcXJfZOaAu4VRB4Hg` (mode test, identifiant non secret). La configuration live reste à créer et à vérifier séparément avant l'ouverture réelle ; ne pas recopier l'identifiant de test en mode live. Le code contrôle le format et exige cette variable, mais l'existence, le mode et les réglages de la configuration sont vérifiés par Stripe. Ne pas réactiver SEPA dans la configuration dédiée. Référence du paramètre : https://docs.stripe.com/api/checkout/sessions/create#create_checkout_session-payment_method_configuration.
 
 ## Administration (exemples ; jeton jamais dans une conversation ni un fichier)
 
@@ -109,5 +128,6 @@ curl -s … -d '{"action":"relancer-envoi","id":"MSG-…"}'
 ## Tests
 
 - `npm test` : 52 tests du parcours (dont 4 du fournisseur « make » et 3 de configuration avant ouverture) et 7 tests de garde du stockage. Achat direct (prix serveur, fermé sans capture, double clic, clé réutilisée, limites), concurrence et pannes injectées, reprises de la file, coordonnées corrigées avant paiement, retour après échec ou expiration. Les clés restreintes respectent le mode choisi ; une configuration de courriel incomplète ne consomme aucune tentative, puis les messages repartent après configuration même si les nouvelles ventes restent fermées. L'adaptateur refuse les ETag absents, les conditions d'écriture invalides et les succès de stockage non confirmés.
+- `tests/bd-retractation.test.mjs` couvre le dépôt durable, les reprises concurrentes, l'absence de lecture des commandes, les erreurs avant/après enregistrement, la réparation de la file, les limites anti-abus et le récapitulatif avant confirmation, sans réseau, courriel réel ni donnée client.
 - `CHROMIUM_PATH=… PLAYWRIGHT_GLOBAL=$(npm root -g) node tests/e2e/e2e.mjs <dossier des captures, hors du dépôt>` : 66 vérifications navigateur (offres, achat fermé et ouvert, double clic, aucun questionnaire avant paiement, retour, espace, récupération), sur un serveur local avec les vraies fonctions, Stripe simulé, sans réseau.
 - Un vrai test Stripe est **bloqué** tant que les clés de test `BD_*` n'existent pas.

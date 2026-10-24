@@ -49,6 +49,9 @@ export function lireConfig(env = process.env){
   const sk = env.BD_STRIPE_SECRET_KEY || '';
   const pk = env.BD_STRIPE_PUBLISHABLE_KEY || '';
   const wh = env.BD_STRIPE_WEBHOOK_SECRET || '';
+  // Configuration dédiée aux albums : ne jamais retomber silencieusement sur les
+  // moyens du compte par défaut (qui pourraient inclure un prélèvement SEPA).
+  const paymentMethodConfiguration = (env.BD_STRIPE_PAYMENT_METHOD_CONFIGURATION || '').trim();
   const prefixesServeur = [`sk_${mode}_`, `rk_${mode}_`];
   const prefixePk = mode === 'live' ? 'pk_live_' : 'pk_test_';
   const raisons = [];
@@ -56,6 +59,7 @@ export function lireConfig(env = process.env){
   if(!prefixesServeur.some((prefixe) => sk.startsWith(prefixe))) raisons.push('BD_STRIPE_SECRET_KEY absente ou hors mode ' + mode);
   if(!pk.startsWith(prefixePk)) raisons.push('BD_STRIPE_PUBLISHABLE_KEY absente ou hors mode ' + mode);
   if(!wh.startsWith('whsec_')) raisons.push('BD_STRIPE_WEBHOOK_SECRET absente');
+  if(!/^pmc_[A-Za-z0-9]+$/.test(paymentMethodConfiguration)) raisons.push('BD_STRIPE_PAYMENT_METHOD_CONFIGURATION absente ou invalide');
   const secretLien = env.BD_LINK_SECRET || '';
   if(secretLien.length < 32) raisons.push('BD_LINK_SECRET absente ou trop courte (32 caractères au moins)');
   const mailProvider = env.BD_MAIL_PROVIDER || 'none';
@@ -82,6 +86,7 @@ export function lireConfig(env = process.env){
     stripePublishable: pk,
     webhookSecret: wh,
     stripeApiVersion: env.BD_STRIPE_API_VERSION || '2026-03-25.dahlia',
+    stripePaymentMethodConfiguration: paymentMethodConfiguration,
     adminTokenHash: env.BD_ADMIN_TOKEN_SHA256 || '',
     site,
     origines,

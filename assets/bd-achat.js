@@ -91,7 +91,7 @@
         if(x.r.status === 503){ afficherFerme(); return; }
         if(x.r.status === 409 && x.b.erreur === 'deja_paye'){ erreur('Cette commande est déjà réglée. Votre lien personnel vous est transmis ; vous pouvez aussi ouvrir votre espace pour en demander un.'); return; }
         if(x.r.status === 409){ cle = nouvelleCle(); erreur('Cette page a expiré. Vérifiez vos informations et cliquez de nouveau.'); return; }
-        erreur(x.r.status === 429 ? 'Trop d’essais depuis cette connexion. Réessayez dans une heure, ou écrivez à hello@younousjonas.com.' : (x.b.message || 'Le paiement n’a pas pu s’ouvrir. Réessayez dans un moment.'));
+        erreur(x.r.status === 429 ? 'Trop d’essais depuis cette connexion. Réessayez dans une heure, ou écrivez à younousjonas@gmail.com.' : (x.b.message || 'Le paiement n’a pas pu s’ouvrir. Réessayez dans un moment.'));
       })
       .catch(function(){ fin(); erreur('Le paiement n’a pas pu s’ouvrir. Réessayez dans un moment.'); });
   }

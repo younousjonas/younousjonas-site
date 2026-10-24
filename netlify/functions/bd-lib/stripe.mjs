@@ -44,9 +44,11 @@ export async function creerSessionCheckout({ cfg, commande, offre, fetchFn, tent
   // Description reprise par le paiement et la charge : permet au webhook du coaching
   // (stripe-webhook.js) d'ignorer les paiements BD, y compris sur les événements de charge.
   p.set('payment_intent_data[description]', `BD personnelle — ${commande.id}`);
-  // Moyens de paiement : aucun payment_method_types n'est fixé. Stripe affiche ceux de la
-  // configuration du compte (Run Coaching) selon l'éligibilité de chaque acheteur
-  // (carte, Klarna, PayPal…). Paiement comptant intégral : aucun échéancier n'est créé ici.
+  // Configuration BD dédiée : le SEPA et les moyens hors cible y sont désactivés.
+  // Stripe conserve le filtrage dynamique selon l'éligibilité de chaque acheteur.
+  // Paiement comptant intégral : aucun échéancier marchand n'est créé ici.
+  if(!/^pmc_[A-Za-z0-9]+$/.test(cfg.stripePaymentMethodConfiguration || '')) throw new Error('stripe_configuration_moyens_absente');
+  p.set('payment_method_configuration', cfg.stripePaymentMethodConfiguration);
   const r = await fetchFn('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',
     headers: {

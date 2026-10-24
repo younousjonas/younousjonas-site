@@ -8,6 +8,6 @@
     "@netlify/blobs": "^10.0.0"
   },
   "scripts": {
-    "test": "node --test tests/bd.test.mjs tests/bd-store-guard.test.mjs"
+    "test": "node --test tests/bd.test.mjs tests/bd-store-guard.test.mjs tests/bd-retractation.test.mjs"
   }
 }

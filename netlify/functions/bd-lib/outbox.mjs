@@ -54,9 +54,9 @@ export class ErreurDefinitive extends Error {}
 export function envoyeurMake({ url, cle, mode, fetchFn = fetch, delaiMs = 25e3 }){
   return {
     nom: 'make', disponible: true,
-    async envoyer({ to, sujet, texte, idempotencyKey }){
+    async envoyer({ to, sujet, texte, idempotencyKey, liens = true }){
       if(!to) throw new ErreurDefinitive('destinataire_absent');
-      const corps = JSON.stringify({ cle, id: idempotencyKey, mode, to, sujet, html: texteEnHtml(texte) });
+      const corps = JSON.stringify({ cle, id: idempotencyKey, mode, to, sujet, html: texteEnHtml(texte, liens) });
       const r = await fetchFn(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: corps, signal: AbortSignal.timeout(delaiMs) });
       let j = null;
       try{ j = await r.json(); }catch{ j = null; }
@@ -68,16 +68,16 @@ export function envoyeurMake({ url, cle, mode, fetchFn = fetch, delaiMs = 25e3 }
 }
 
 // Texte brut → HTML sûr : échappement, liens https cliquables, retours à la ligne conservés.
-export function texteEnHtml(texte){
+export function texteEnHtml(texte, liensActifs = true){
   const echappe = String(texte || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const liens = echappe.replace(/https:\/\/[^\s<]+/g, (u) => `<a href="${u}">${u}</a>`);
+  const liens = liensActifs ? echappe.replace(/https:\/\/[^\s<]+/g, (u) => `<a href="${u}">${u}</a>`) : echappe;
   return '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5">' + liens.replace(/\n/g, '<br>\n') + '</div>';
 }
 
 // Traite les messages dus. composer(item) fabrique {to, sujet, texte} au moment de l'envoi ;
 // pour un même message, il doit produire le même contenu à chaque reprise.
-export async function traiterFile(store, { envoyeur, composer, maintenant, journal = () => {}, travailleur = crypto.randomUUID() }){
-  const cles = await store.list('ob/');
+export async function traiterFile(store, { envoyeur, composer, maintenant, journal = () => {}, travailleur = crypto.randomUUID(), ids = null }){
+  const cles = ids === null ? await store.list('ob/') : [...new Set(ids)].map((id) => 'ob/' + id);
   const bilan = { envoyes: 0, attente: 0, echecs: 0, annules: 0, bailsPerdus: 0 };
   for(const k of cles){
     if(!envoyeur.disponible){

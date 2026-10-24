@@ -16,6 +16,7 @@ import { verifierSignature, creerSessionCheckout } from './stripe.mjs';
 import { mettreEnFile, traiterFile, ErreurDefinitive } from './outbox.mjs';
 import { QUESTIONNAIRES } from './questionnaires.mjs';
 import { filtrerValeurs, verifier, mettreEnTexte } from './rendu.mjs';
+import { estMessageRetractation, composerRetractation, reprendreNotificationsRetractations } from './retractation.mjs';
 
 const ISO = (ms) => new Date(ms).toISOString();
 const GENERIQUE_LIEN = { erreur: 'lien_invalide', message: 'Ce lien n’est pas valable ou a expiré. Vous pouvez demander un nouveau lien.' };
@@ -107,7 +108,7 @@ export function composerMessage(item, c, lien, cfg){
       'Votre lien personnel (valable 30 jours ; il ouvre votre questionnaire et ne doit pas être transféré) :',
       lien, '',
       ...(cfg.recuStripe ? ['Votre reçu de paiement vous est adressé séparément par Stripe.'] : []),
-      `Une question : ${cfg.adminEmail || 'hello@younousjonas.com'}`, '',
+      `Une question : ${cfg.adminEmail || 'younousjonas@gmail.com'}`, '',
       'Younous Jonas',
     ];
     const sujet = item.type === 'confirmation'
@@ -122,6 +123,7 @@ export function composerMessage(item, c, lien, cfg){
 // un envoi ambigu reproduit exactement le même lien, déjà actif, au lieu d'en émettre un autre.
 export function fabriqueComposer(store, cfg, maintenant){
   return async (item) => {
+    if(estMessageRetractation(item)) return composerRetractation(store, item, cfg);
     if(item.type === 'alerte') return composerMessage(item, null, null, cfg);
     const jeton = jetonDerive(cfg.secretLien, 'acces:' + item.id);
     const etat = await activerJetonAcces(store, item.commandeId, jeton, maintenant, { message: item.id, generation: item.generation || 0 });
@@ -526,6 +528,7 @@ export function handlerQuestionnaire(d){
 // ---------- 7. File d'envoi (fonction planifiée) ----------
 export async function executerFile(d){
   const maintenant = d.now();
+  await reprendreNotificationsRetractations(d.store, maintenant, d.journal);
   return traiterFile(d.store, { envoyeur: d.envoyeur, composer: fabriqueComposer(d.store, d.cfg, maintenant), maintenant, journal: d.journal, travailleur: d.travailleur });
 }
 

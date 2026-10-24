@@ -20,7 +20,7 @@ const WHSEC = 'whsec_secret_de_test';
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
 function env(extra = {}){
-  return { BD_PAYMENTS_ENABLED: 'true', BD_STRIPE_SECRET_KEY: 'sk_test_cle_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_test_cle_factice', BD_STRIPE_WEBHOOK_SECRET: WHSEC, BD_ADMIN_TOKEN_SHA256: sha(ADMIN), URL: SITE, BD_ADMIN_EMAIL: 'admin@example.invalid', BD_LINK_SECRET: 'secret-de-lien-de-test-0123456789abcdef', ...extra };
+  return { BD_PAYMENTS_ENABLED: 'true', BD_STRIPE_SECRET_KEY: 'sk_test_cle_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_test_cle_factice', BD_STRIPE_WEBHOOK_SECRET: WHSEC, BD_STRIPE_PAYMENT_METHOD_CONFIGURATION: 'pmc_bdtest', BD_ADMIN_TOKEN_SHA256: sha(ADMIN), URL: SITE, BD_ADMIN_EMAIL: 'admin@example.invalid', BD_LINK_SECRET: 'secret-de-lien-de-test-0123456789abcdef', ...extra };
 }
 
 function monde(opts = {}){
@@ -167,6 +167,8 @@ test('paiement : mode live refusé par défaut, clé hors mode refusée', () => 
   assert.equal(lireConfig(env({ BD_STRIPE_SECRET_KEY: 'sk_live_x' })).paiementsActifs, false);
   assert.equal(lireConfig(env({ BD_STRIPE_SECRET_KEY: '', STRIPE_SECRET_KEY: 'sk_test_coaching' })).paiementsActifs, false, 'les clés génériques du coaching ne sont jamais lues');
   assert.equal(lireConfig(env()).paiementsActifs, true);
+  assert.equal(lireConfig(env({ BD_STRIPE_PAYMENT_METHOD_CONFIGURATION: '' })).paiementsActifs, false, 'sans configuration dédiée, aucun retour implicite aux moyens par défaut');
+  assert.equal(lireConfig(env({ BD_STRIPE_PAYMENT_METHOD_CONFIGURATION: 'pmc_invalide/autre' })).paiementsActifs, false);
 });
 
 test('achat : session Embedded Checkout au montant serveur, ui_mode=embedded_page, clé d’idempotence fixe par commande', async () => {
@@ -560,6 +562,7 @@ test('Checkout : moyens de paiement dynamiques du compte (aucun type imposé), c
   assert.ok(![...p.keys()].some((k) => k.startsWith('payment_method_types')), 'aucun payment_method_types : Stripe propose carte, Klarna, PayPal… selon l’éligibilité');
   assert.equal(p.get('mode'), 'payment', 'paiement unique, pas d’abonnement');
   assert.equal(p.get('integration_identifier'), 'komsa_bd_dnuojqhw', 'identifiant stable du parcours Checkout');
+  assert.equal(p.get('payment_method_configuration'), 'pmc_bdtest', 'la session utilise exclusivement la configuration dédiée BD');
   assert.ok(![...p.keys()].some((k) => k.includes('subscription') || k.includes('installments')), 'aucun échéancier maison');
   assert.equal(p.get('payment_intent_data[description]'), `BD personnelle — ${commande}`);
 });

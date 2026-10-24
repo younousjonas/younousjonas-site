@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Se rétracter du contrat — BD personnelle - Younous Jonas</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/bd.css">
+  <script defer src="/assets/bd-retractation.js"></script>
+  <style>
+    .bdr-wrap{max-width:760px;margin:auto;padding-bottom:3rem}
+    .bdr-wrap [hidden]{display:none!important}
+    .bdr-wrap fieldset{border:0;padding:0;margin:0;min-width:0}
+    .bdr-wrap textarea{min-height:120px;resize:vertical}
+    .bdr-wrap .hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+    .bdr-error{color:#8e2525;font-weight:600}
+    .bdr-recap{display:grid;grid-template-columns:1fr;gap:.3rem;margin:1.5rem 0}
+    .bdr-recap dt{font-weight:700;margin-top:.65rem}
+    .bdr-recap dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+    .bdr-accuse{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.6}
+    .bdr-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin:1.5rem 0}
+    .bdr-wrap button:disabled{opacity:.65;cursor:wait}
+  </style>
+</head>
+<body>
+<nav class="nav"><div class="container nav-inner"><a class="brand" href="/">Younous Jonas<span>Auteur. Consultant. Fondateur de Komsa.</span></a><div class="menu"><a href="/bd-personnelle.html">BD personnelle</a><a href="/mon-album.html">Mon album</a></div></div></nav>
+<main>
+  <section class="bdq-head"><div class="container" style="max-width:760px"><div class="kicker">BD personnelle</div><h1>Se rétracter du contrat</h1></div></section>
+  <section class="bdq-wrap"><div class="container bdr-wrap">
+    <p>Vous pouvez notifier ici votre décision de vous rétracter d’un contrat de BD personnelle, sans vous connecter. Après avoir vérifié le récapitulatif, confirmez l’envoi de votre déclaration.</p>
+    <p>Ce formulaire reste accessible lorsque les nouvelles commandes sont fermées. Vous pouvez aussi écrire directement à <a href="mailto:younousjonas@gmail.com">younousjonas@gmail.com</a>.</p>
+    <p id="bdr-nojs" class="bdq-notice">Ce formulaire a besoin de JavaScript. Si votre navigateur le bloque, vous pouvez notifier votre décision par courriel à l’adresse ci-dessus, en indiquant vos nom et prénom et des éléments permettant d’identifier le contrat.</p>
+
+    <form id="bdr-form" class="bdq-form" method="post" action="/.netlify/functions/bd-retractation">
+      <fieldset id="bdr-champs" disabled>
+        <p class="hp" aria-hidden="true"><label>Ne pas remplir <input name="siteweb" tabindex="-1" autocomplete="off"></label></p>
+        <div class="bdq-q"><label class="bdq-field" for="bdr-prenoms"><span class="bdq-title">Prénom(s) <span class="bdq-req">(nécessaire)</span></span><input id="bdr-prenoms" name="prenoms" type="text" autocomplete="given-name" maxlength="120" required></label></div>
+        <div class="bdq-q"><label class="bdq-field" for="bdr-nom"><span class="bdq-title">Nom <span class="bdq-req">(nécessaire)</span></span><input id="bdr-nom" name="nom" type="text" autocomplete="family-name" maxlength="120" required></label></div>
+        <div class="bdq-q"><label class="bdq-field" for="bdr-email"><span class="bdq-title">Adresse électronique choisie pour l’accusé de réception <span class="bdq-req">(nécessaire)</span></span><input id="bdr-email" name="email" type="email" autocomplete="email" maxlength="254" required></label></div>
+        <div class="bdq-q"><label class="bdq-field" for="bdr-reference"><span class="bdq-title">Référence de la commande</span><span class="bdq-hint">Facultatif si vous fournissez ci-dessous d’autres indications permettant d’identifier le contrat.</span><input id="bdr-reference" name="referenceCommande" type="text" autocomplete="off" maxlength="120"></label></div>
+        <div class="bdq-q"><label class="bdq-field" for="bdr-elements"><span class="bdq-title">Autres indications permettant d’identifier le contrat</span><span class="bdq-hint" id="bdr-elements-aide">Par exemple : l’album commandé, la date approximative de commande ou l’adresse électronique utilisée. Une référence ou ces indications suffisent. Aucun motif de rétractation n’est demandé.</span><textarea id="bdr-elements" name="elementsCommande" maxlength="1000" aria-describedby="bdr-elements-aide"></textarea></label></div>
+        <p>Ces informations servent à enregistrer votre déclaration, à vous en transmettre l’accusé et à identifier le contrat pour la suite. <a href="/confidentialite.html">Confidentialité</a></p>
+        <p id="bdr-form-erreur" class="bdr-error" role="alert" tabindex="-1" hidden></p>
+        <div class="bdr-actions"><button class="btn" type="submit">Se rétracter du contrat</button></div>
+      </fieldset>
+    </form>
+
+    <section id="bdr-recap" class="bdq-q" hidden aria-labelledby="bdr-recap-titre">
+      <h2 id="bdr-recap-titre" tabindex="-1">Vérifier votre déclaration</h2>
+      <p id="bdr-declaration">Je notifie ma décision de me rétracter du contrat identifié ci-dessous.</p>
+      <dl class="bdr-recap">
+        <dt>Prénom(s)</dt><dd id="bdr-recap-prenoms"></dd>
+        <dt>Nom</dt><dd id="bdr-recap-nom"></dd>
+        <dt>Adresse électronique choisie pour l’accusé</dt><dd id="bdr-recap-email"></dd>
+        <dt>Référence de la commande indiquée</dt><dd id="bdr-recap-reference"></dd>
+        <dt>Autres indications permettant d’identifier le contrat</dt><dd id="bdr-recap-elements"></dd>
+      </dl>
+      <p>Votre déclaration sera transmise à Run Coaching lorsque vous confirmerez ci-dessous. Un accusé reprenant son contenu et la date et l’heure de transmission sera affiché et envoyé à l’adresse choisie.</p>
+      <p id="bdr-envoi-statut" role="status" aria-live="polite"></p>
+      <p id="bdr-envoi-erreur" class="bdr-error" role="alert" tabindex="-1" hidden></p>
+      <div class="bdr-actions"><button id="bdr-confirmer" class="btn" type="button">Confirmer la rétractation</button><button id="bdr-modifier" class="btn secondary" type="button">Modifier les informations</button></div>
+    </section>
+
+    <section id="bdr-succes" class="bdq-q" hidden aria-labelledby="bdr-succes-titre">
+      <h2 id="bdr-succes-titre" tabindex="-1">Votre déclaration est enregistrée.</h2>
+      <p>Vous pouvez conserver l’accusé ci-dessous. Une copie est mise en envoi à l’adresse électronique choisie ; sa réception peut prendre quelques instants.</p>
+      <p>Cet accusé atteste la réception de votre déclaration. Le remboursement éventuel sera traité séparément après identification du contrat.</p>
+      <pre id="bdr-accuse" class="bdr-accuse"></pre>
+      <div class="bdr-actions"><button id="bdr-telecharger" class="btn secondary" type="button">Télécharger mon accusé de réception</button><a class="btn secondary" href="/bd-personnelle.html">Retour aux offres</a></div>
+      <p>Si vous ne recevez pas la copie par courriel, conservez cet accusé et contactez <a href="mailto:younousjonas@gmail.com">younousjonas@gmail.com</a>.</p>
+    </section>
+  </div></section>
+</main>
+<footer class="footer"><div class="container footer-inner"><div>© Younous Jonas - Komsa Éditions</div><div><a href="mailto:younousjonas@gmail.com">younousjonas@gmail.com</a> · <a href="/mentions-legales.html">Mentions légales</a> · <a href="/confidentialite.html">Confidentialité</a></div></div></footer>
+</body>
+</html>
