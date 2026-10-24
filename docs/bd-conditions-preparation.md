@@ -1,67 +1,58 @@
-# Conditions de commande BD — préparation de l’intégration
+# Conditions de commande BD — intégration et version de publication
 
 ## État de cette branche
 
-La branche `codex/bd-conditions-preparation-20261024` prépare les conditions des deux albums, leur acceptation avant paiement et leur remise dans la confirmation. Elle part du commit d’affichage Klarna/PayPal `274c320383aee27de5d7d763dcb9a6fd6ada7043`.
+La branche `codex/bd-conditions-preparation-20261024` contient les conditions des deux albums, leur acceptation avant paiement et leur remise dans la confirmation. Elle conserve l’affichage Klarna/PayPal du commit `274c320383aee27de5d7d763dcb9a6fd6ada7043`.
 
-**La version contractuelle reste préparatoire : `bd-2026-10-24-preparatoire-2`, datée du 24 octobre 2026.** La page le dit explicitement et le serveur bloque les nouveaux achats live pour cette version. La recette avec un paiement test reste possible. Cette branche n’est pas une autorisation de publication sur `main` ni d’ouverture du paiement réel.
+La version de publication est **`bd-2026-10-24-v1`, datée du 24 octobre 2026**. Elle remplace la version préparatoire active sans écraser sa copie conservable. Le propriétaire a demandé la publication des conditions avec un état transparent de la médiation, sans attendre son rattachement à un dispositif.
 
-La section 15 de la page doit encore recevoir **l’identité et les coordonnées du médiateur de la consommation effectivement compétent pour Run Coaching, avec confirmation de son rattachement à ce dispositif**. Aucun médiateur n’a été choisi ou souscrit dans ce lot. Les autres informations du vendeur, notamment le téléphone professionnel, sont renseignées.
+**La médiation reste en cours de mise en place.** Son nom et ses coordonnées sont encore à compléter en section 15. `hello@younousjonas.com` est l’adresse de réclamation du vendeur ; elle n’est pas présentée comme celle d’un médiateur indépendant. Aucun organisme ni rattachement n’a été inventé. La mise en ligne du document ne signifie pas que cette obligation est déjà entièrement satisfaite.
 
-## Contenu conservé
+Le verrou technique attaché au statut préparatoire est retiré. Les achats restent gouvernés par les protections de paiement existantes : activation explicite, mode live confirmé, clés adaptées au mode, secret webhook, configuration des moyens, secret des liens et fournisseur de courriel complet. Des conditions publiables ne suffisent donc pas à ouvrir un paiement live incomplet. Ce lot est livré pour revue avant intégration sur `main`.
 
-La page reprend les décisions commerciales existantes : offres à 297 € et 891 €, délais de proposition narrative connus, validation du récit, retours convenus, livraison numérique, utilisation autorisée des documents et photos, confidentialité, rétractation et garanties légales.
+## Contacts et contenu
 
-Le calendrier de remise de l’album final à 891 € et les retours sont convenus par écrit pour chaque projet. La commande reste distincte des accords éditoriaux. L’acceptation des CGV ne vaut pas demande de commencement anticipé, consentement photo ou autorisation de publication.
+- Commandes, contact commercial et confirmations : `younousjonas@gmail.com`.
+- Réclamations et demandes de correction d’un défaut : `hello@younousjonas.com`.
+- Rétractation : le formulaire en ligne et les coordonnées opérationnelles déjà indiquées sont conservés.
 
-La version préparatoire 2 retire des sections 4 et 6 les phrases de pilotage interne relatives à une approbation manuelle, à un délai général de huit semaines et à des nombres appliqués par défaut. Elle ne modifie aucun délai, quota ou droit. La première copie locale déjà figée n’a pas été réécrite ; cette branche contient la nouvelle copie active.
+Les offres à 297 € et 891 €, les délais, les quotas de retours, la validation du récit, la livraison numérique, les accords d’utilisation des documents et photos, la confidentialité et les droits légaux sont conservés. Le calendrier final de l’album à 891 € et ses retours restent convenus par écrit pour chaque projet. L’acceptation des CGV, le paiement et l’ouverture du questionnaire ne valent pas demande de commencement anticipé ou consentement éditorial.
 
-## Parcours et preuve d’acceptation
+## Acceptation et preuve conservée
 
-La page d’achat présente une case CGV distincte, non cochée à l’avance. Le descriptif renvoyé par `bd-achat` fournit la version, sa date, le statut, le lien de la page et le lien du texte téléchargeable. Un changement de version décoche la case et nécessite une nouvelle acceptation explicite.
+La page présente une case CGV distincte, non cochée à l’avance. Le serveur fournit la version, sa date et le lien du texte téléchargeable. Un changement de version décoche la case et exige une nouvelle acceptation.
 
-| Entrée ou situation | Contrôle côté serveur |
+| Situation | Contrôle serveur |
 | --- | --- |
-| `conditionsAcceptees` absent, faux ou différent du booléen `true` | Réponse 422 ; aucune commande ni session Stripe créée. |
-| `versionConditions` absent ou différent de la version serveur | Réponse 409 `conditions_actualisees` ; aucune commande ni session Stripe créée. |
-| Version préparatoire et mode live | Paiement indisponible sur GET ; réponse 503 sur POST avant toute collecte. |
-| Ancienne clé d’achat sans preuve de version correspondante | Nouvelle acceptation demandée ; aucune preuve rétroactive inventée. |
+| `conditionsAcceptees` absent, faux ou différent du booléen `true` | 422, sans commande ni session Stripe. |
+| `versionConditions` absent ou différent de la version serveur | 409 `conditions_actualisees`, sans commande ni session Stripe. |
+| Configuration de paiement incomplète ou ventes fermées | GET indisponible et POST 503 avant collecte. |
+| Ancienne clé sans preuve de version correspondante | Nouvelle acceptation demandée ; aucune preuve rétroactive créée. |
 
-Le serveur enregistre la copie suivante dans `commande.conditions` :
+La commande conserve dans `conditions` la version, la date de version, le statut, le texte intégral, son empreinte SHA-256 et `accepteesLe`, horodatage UTC de la première requête valide. L’index d’achat fixe version, empreinte et date avant la création de commande. Une reprise après panne conserve cette date ; une correction des coordonnées ne modifie pas la preuve.
 
-| Champ | Provenance |
-| --- | --- |
-| `version`, `dateVersion`, `statut` | Version générée depuis la page contractuelle. |
-| `texte` | Texte intégral accepté, figé dans la commande. |
-| `empreinteSha256` | Empreinte du texte intégral UTF-8. |
-| `accepteesLe` | Date et heure UTC de la première requête valide, enregistrées par le serveur. |
-| `page`, `url` | Liens de consultation et de téléchargement de la version. |
-
-L’index d’achat conserve la version, l’empreinte et la date avant la création de commande. Une reprise après panne conserve cette date. Une correction des coordonnées ne remplace ni le texte ni l’horodatage. Les métadonnées de la session Checkout et du PaymentIntent reprennent `bd_conditions_version`, `bd_conditions_date`, `bd_conditions_acceptees_le` et `bd_conditions_sha256`.
-
-La confirmation de paiement ajoute le texte intégral enregistré avec la commande dans le corps du courriel, avec la version et la date d’acceptation. Elle ne recharge pas la page publique courante. Les reprises de la file d’envoi utilisent cette même copie. Les anciens dossiers sans preuve d’acceptation ne reçoivent pas de preuve fictive.
+Les métadonnées Checkout et PaymentIntent reprennent `bd_conditions_version`, `bd_conditions_date`, `bd_conditions_acceptees_le` et `bd_conditions_sha256`. La confirmation de paiement contient le texte intégral enregistré avec la commande, avec sa version et la date d’acceptation. Les reprises de la file relisent cette même copie, sans charger la page publique courante.
 
 ## Fichiers
 
 | Fichier | Fonction |
 | --- | --- |
-| [`conditions-bd.html`](../conditions-bd.html) | Page source des quinze sections contractuelles et avis préparatoire. |
-| [`conditions/bd-2026-10-24-preparatoire-2.txt`](../conditions/bd-2026-10-24-preparatoire-2.txt) | Copie téléchargeable et conservable. |
-| [`scripts/generer-conditions.py`](../scripts/generer-conditions.py) | Génération et contrôle de cohérence des copies. |
-| [`netlify/functions/bd-lib/conditions.mjs`](../netlify/functions/bd-lib/conditions.mjs) | Texte et métadonnées embarqués dans les fonctions. |
-| [`achat-bd.html`](../achat-bd.html), [`assets/bd-achat.js`](../assets/bd-achat.js) | Présentation et acceptation explicite avant paiement. |
-| [`netlify/functions/bd-lib/handlers.mjs`](../netlify/functions/bd-lib/handlers.mjs) | Contrôles, preuve conservée et copie dans le courriel. |
+| [`conditions-bd.html`](../conditions-bd.html) | Page source des quinze sections contractuelles. |
+| [`conditions/bd-2026-10-24-v1.txt`](../conditions/bd-2026-10-24-v1.txt) | Copie active téléchargeable. |
+| [`scripts/generer-conditions.py`](../scripts/generer-conditions.py) | Génération et contrôle de cohérence. |
+| [`netlify/functions/bd-lib/conditions.mjs`](../netlify/functions/bd-lib/conditions.mjs) | Texte et métadonnées embarqués. |
+| [`achat-bd.html`](../achat-bd.html), [`assets/bd-achat.js`](../assets/bd-achat.js) | Acceptation explicite avant paiement. |
+| [`netlify/functions/bd-lib/handlers.mjs`](../netlify/functions/bd-lib/handlers.mjs) | Validation, preuve et copie dans le courriel. |
 | [`netlify/functions/bd-lib/stripe.mjs`](../netlify/functions/bd-lib/stripe.mjs) | Métadonnées Stripe. |
 | [`tests/bd-conditions.test.mjs`](../tests/bd-conditions.test.mjs), [`tests/bd.test.mjs`](../tests/bd.test.mjs) | Recette ciblée et fixtures du parcours. |
-| [`package.json`](../package.json) | Commandes de test et de vérification. |
 
-Le bloc de financement, la notice de paiement et le lien CSS du commit de départ sont conservés dans `achat-bd.html`. Les seules insertions CGV sur cette page sont le bloc `#bda-q-conditions` après `#bda-q-consentement` et le lien de pied de page. `bd-personnelle.html`, la CSS de financement et les deux SVG sont identiques au commit de départ.
+Le TXT préparatoire `bd-2026-10-24-preparatoire-2.txt` est conservé intact comme ancienne version. Le fichier `package.json` inclut la recette CGV et la vérification de génération. Aucun patch local, journal de test ou fichier temporaire n’est ajouté au dépôt.
 
-## Vérification
+Les blocs et la notice Klarna/PayPal de la page d’achat sont conservés. `bd-personnelle.html`, la CSS de financement et les SVG ne sont pas modifiés par ce lot.
 
-Le raccordement initial a passé 83 tests locaux : 8 pour les CGV, 52 pour le parcours, 16 pour la rétractation et 7 pour la garde du stockage, avec environnement vide et réseau bloqué. Une seconde relecture technique a vérifié l’immutabilité, la reprise après panne, la confirmation et les métadonnées.
+## Vérifications
 
-Après la réconciliation avec l’affichage Klarna/PayPal et la correction rédactionnelle, les huit tests CGV ont été réexécutés. Le générateur a vérifié l’identité page/texte/module. La page d’achat a été comparée au commit de départ : retirer les deux insertions CGV redonne exactement son contenu, y compris les blocs marketing.
+Le raccordement initial a passé 83 tests locaux et une seconde revue technique. Pour cette finalisation, la recette ciblée couvre l’acceptation obligatoire, la version imposée par le serveur, la conservation des preuves, les métadonnées, la copie du courriel, les contacts et l’état transparent de la médiation. Elle vérifie aussi un achat live entièrement simulé et le maintien de la fermeture pour chacun des prérequis de paiement manquant. Le générateur contrôle l’identité page/texte/module.
 
 Depuis la racine du dépôt :
 
@@ -71,19 +62,18 @@ node tests/bd-conditions.test.mjs
 npm test
 ```
 
-Les tests utilisent des coordonnées synthétiques, un magasin en mémoire et des appels Stripe simulés. Cette recette vérifie la production du texte du courriel ; elle n’envoie pas de confirmation réelle de ces nouvelles conditions.
+La recette utilise des données synthétiques, un magasin en mémoire et des appels Stripe simulés. Elle ne crée aucun paiement réel et n’envoie pas de confirmation réelle. Les secrets et variables de production sont gérés séparément.
 
-## Passage à la version définitive
+## Mises à jour ultérieures
 
-1. Compléter la section 15 avec le médiateur effectivement compétent et ses coordonnées. Conserver les autres décisions commerciales.
-2. Fixer une nouvelle version et sa date dans la page, mettre à jour le nom du téléchargement, puis retirer les avis préparatoires devenus sans objet. Le statut HTML `published` génère le statut serveur `publiee`.
-3. Exécuter `python scripts/generer-conditions.py`, puis la vérification `--check`. La page, le nouveau TXT et le module doivent être intégrés ensemble. Ajuster le test spécifique au statut préparatoire au statut explicitement retenu.
-4. Conserver les copies des versions déjà acceptées. Le générateur refuse de modifier un TXT différent sous le même identifiant. L’ouverture effective reste soumise aux réglages de paiement existants et à la décision de publication.
+Quand le dispositif de médiation sera effectivement établi, compléter la section 15 avec ses coordonnées et retirer la mention de mise en place en cours. Cette modification devra recevoir une nouvelle version et une date : ne pas réécrire une copie déjà figée.
 
-## Références officielles utilisées pour les clauses
+Mettre à jour la page et le lien de téléchargement, exécuter `python scripts/generer-conditions.py`, puis la vérification `--check` et la recette ciblée. Intégrer ensemble la page, le nouveau TXT et le module. Conserver les anciennes copies et les preuves déjà enregistrées sur les commandes. Les protections de paiement restent indépendantes de ces mises à jour contractuelles.
+
+## Références officielles utilisées
 
 - [Conditions générales de vente — Service Public Entreprendre](https://entreprendre.service-public.gouv.fr/vosdroits/F33527).
-- [Code de la consommation, L221-18 — rétractation](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032226842/).
-- [L221-21 — rétractation en ligne](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053310520) et [D221-5 — récapitulatif, confirmation et accusé](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053303365).
+- [L221-18 — rétractation](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032226842/).
+- [L221-21 — rétractation en ligne](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053310520) et [D221-5 — confirmation et accusé](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053303365).
 - [L221-25 — commencement anticipé](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044563179).
 - [Médiation de la consommation — obligations du professionnel](https://www.economie.gouv.fr/mediation-conso/vous-etes-un-professionnel/vos-principales-obligations-0).

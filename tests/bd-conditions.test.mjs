@@ -18,15 +18,15 @@ const CORPS = {
   whatsapp: '+262692000000', declarationWhatsapp: true, consentement: true,
   conditionsAcceptees: true, versionConditions: CONDITIONS.version,
 };
-function monde(){
+function monde(env = {}){
   let temps = Date.UTC(2026, 9, 24, 12, 34, 56);
   const appels = [];
   const d = {
     store: magasinMemoire(), now: () => temps, journal: () => {},
-    cfg: lireConfig({ BD_PAYMENTS_ENABLED: 'true', BD_STRIPE_SECRET_KEY: 'sk_test_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_test_factice', BD_STRIPE_WEBHOOK_SECRET: 'whsec_factice', BD_STRIPE_PAYMENT_METHOD_CONFIGURATION: 'pmc_test', BD_LINK_SECRET: 'lien-factice-0123456789abcdefghijklmnop', URL: SITE }),
+    cfg: lireConfig({ BD_PAYMENTS_ENABLED: 'true', BD_STRIPE_SECRET_KEY: 'sk_test_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_test_factice', BD_STRIPE_WEBHOOK_SECRET: 'whsec_factice', BD_STRIPE_PAYMENT_METHOD_CONFIGURATION: 'pmc_test', BD_LINK_SECRET: 'lien-factice-0123456789abcdefghijklmnop', URL: SITE, ...env }),
     fetchFn: async (url, init) => {
       appels.push({ url, init });
-      return new Response(JSON.stringify({ id: 'cs_test_CONDITIONS0001', client_secret: 'secret_client_factice', livemode: false }), { status: 200 });
+      return new Response(JSON.stringify({ id: 'cs_' + d.cfg.mode + '_CONDITIONS0001', client_secret: 'secret_client_factice', livemode: d.cfg.mode === 'live' }), { status: 200 });
     },
   };
   return { d, appels, avancer: (ms) => { temps += ms; } };
@@ -113,19 +113,37 @@ test('CGV : confirmation contient le texte intégral enregistré, même après u
   assert.ok(!composerMessage({ type: 'confirmation' }, c, 'lien', cfg).texte.includes('Version acceptée'), 'aucune preuve inventée pour un ancien dossier');
 });
 
-test('CGV : version préparatoire bloque le live malgré une configuration paiement active', async () => {
-  assert.equal(CONDITIONS.statut, 'preparatoire');
-  const m = monde();
-  m.d.cfg.mode = 'live'; m.d.cfg.paiementsActifs = true;
+test('CGV : version de publication compatible live ; protections réelles toujours requises', async () => {
+  assert.equal(CONDITIONS.statut, 'publiee');
+  const live = {
+    BD_PAYMENTS_MODE: 'live', BD_STRIPE_SECRET_KEY: 'sk_live_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_live_factice',
+    BD_PAYMENTS_LIVE_CONFIRMED: 'oui', BD_MAIL_PROVIDER: 'make', BD_MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/factice',
+    BD_MAKE_WEBHOOK_KEY: 'cle-make-factice-0123456789abcdefghijklmnop', BD_ADMIN_EMAIL: 'admin@example.invalid',
+  };
+  const m = monde(live);
+  assert.equal(m.d.cfg.paiementsActifs, true);
   const g = await handlerAchat(m.d)(new Request(SITE + '/.netlify/functions/bd-achat?offre=297'));
   const b = await g.json();
-  assert.equal(b.paiementDisponible, false);
+  assert.equal(b.paiementDisponible, true);
   assert.equal(b.conditions.version, CONDITIONS.version);
-  assert.equal(b.conditions.statut, 'preparatoire');
+  assert.equal(b.conditions.statut, 'publiee');
   assert.equal(b.conditions.texte, undefined, 'le descriptif ne transmet que les métadonnées publiques');
-  assert.equal((await handlerAchat(m.d)(post())).status, 503);
-  assert.equal(m.d.store._map.size, 0, 'aucune collecte lorsque le live est fermé');
-  assert.equal(m.appels.length, 0);
+  assert.equal((await handlerAchat(m.d)(post())).status, 200, 'seul Stripe simulé est appelé');
+  assert.equal(m.appels.length, 1);
+  for(const invalide of [
+    { BD_PAYMENTS_ENABLED: '' }, { BD_PAYMENTS_LIVE_CONFIRMED: '' },
+    { BD_STRIPE_SECRET_KEY: 'sk_test_horsmode' }, { BD_STRIPE_PUBLISHABLE_KEY: 'pk_test_horsmode' },
+    { BD_STRIPE_WEBHOOK_SECRET: '' }, { BD_STRIPE_PAYMENT_METHOD_CONFIGURATION: '' },
+    { BD_LINK_SECRET: '' }, { BD_MAIL_PROVIDER: 'none' },
+  ]){
+    const ferme = monde({ ...live, ...invalide });
+    assert.equal(ferme.d.cfg.paiementsActifs, false);
+    const get = await handlerAchat(ferme.d)(new Request(SITE + '/.netlify/functions/bd-achat?offre=297'));
+    assert.equal((await get.json()).paiementDisponible, false);
+    assert.equal((await handlerAchat(ferme.d)(post())).status, 503);
+    assert.equal(ferme.d.store._map.size, 0, 'aucune collecte lorsque le live est fermé');
+    assert.equal(ferme.appels.length, 0);
+  }
 });
 
 test('CGV : copie téléchargeable identique au texte serveur et sans sources privées du chantier', () => {
@@ -134,6 +152,10 @@ test('CGV : copie téléchargeable identique au texte serveur et sans sources pr
   assert.equal(sha(texte), CONDITIONS.empreinteSha256);
   assert.equal((texte.match(/^\d+\. /gm) || []).length, 15);
   assert.ok(texte.includes('+262 692 25 50 60'));
+  assert.ok(texte.includes('Réclamations : hello@younousjonas.com'));
+  assert.ok(texte.includes('Courriel commercial et confirmations de commande : younousjonas@gmail.com'));
+  assert.ok(texte.includes('Le dispositif de médiation de Run Coaching est en cours de mise en place'));
+  assert.ok(!texte.includes('VERSION PRÉPARATOIRE'));
   assert.ok(texte.includes('https://younousjonas.com/retractation-bd'));
   assert.ok(!/drive\.google\.com|mail\.google\.com|19a1a45c47b0dfbd/.test(texte));
 });

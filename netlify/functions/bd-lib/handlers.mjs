@@ -172,9 +172,6 @@ const conditionsPubliques = () => {
   const { texte, ...meta } = CONDITIONS;
   return meta;
 };
-// Le statut est fixé dans la version du contrat. Un réglage paiement ne peut pas
-// transformer cette version préparatoire en contrat publié.
-const conditionsDisponibles = (cfg) => cfg.mode === 'test' || CONDITIONS.statut === 'publiee';
 
 export function handlerAchat(d){
   return protege(d, 'achat', async (req, context) => {
@@ -182,13 +179,13 @@ export function handlerAchat(d){
     if(req.method === 'GET'){
       const o = offreDe(new URL(req.url).searchParams.get('offre'));
       if(!o) return json(404, { erreur: 'offre_inconnue' });
-      return json(200, { code: o.code, nom: o.nom, libelle: o.libelle, montant: montantTexte(o.montant, o.devise), etape: o.etape, paiementDisponible: d.cfg.paiementsActifs && conditionsDisponibles(d.cfg), conditions: conditionsPubliques() });
+      return json(200, { code: o.code, nom: o.nom, libelle: o.libelle, montant: montantTexte(o.montant, o.devise), etape: o.etape, paiementDisponible: d.cfg.paiementsActifs, conditions: conditionsPubliques() });
     }
     if(req.method !== 'POST') return json(405, { erreur: 'methode' });
     if(!origineAutorisee(req, d.cfg)) return json(403, { erreur: 'origine' });
     const { corps, erreur } = await lireJSON(req, 10_000);
     if(erreur) return json(400, { erreur: 'requete' });
-    if(!d.cfg.paiementsActifs || !conditionsDisponibles(d.cfg)){
+    if(!d.cfg.paiementsActifs){
       d.journal('paiement_inactif', d.cfg.raisonsInactif.length + ' condition(s) manquante(s)');
       return json(503, { erreur: 'paiement_indisponible', message: 'Le paiement en ligne n’est pas encore ouvert. Aucune information n’a été enregistrée.' });
     }

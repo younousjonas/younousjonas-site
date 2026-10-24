@@ -121,7 +121,6 @@
         $('bda-conditions-version').textContent = 'version ' + conditions.version + ' du ' + conditions.dateVersion;
         $('bda-conditions-page').href = conditions.page + '?version=' + encodeURIComponent(conditions.version);
         $('bda-conditions-copie').href = conditions.url;
-        $('bda-conditions-preparatoires').hidden = conditions.statut !== 'preparatoire';
         if(b.paiementDisponible){ $('bda-ferme').hidden = true; form.hidden = false; }
         else afficherFerme();
       })
