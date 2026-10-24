@@ -1,0 +1,10 @@
+/* Information sur le financement des albums, avec les couleurs du site.
+   Les marques sont des fichiers locaux : aucun script ni appel à un tiers. */
+.bd-financement{min-width:0;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:16px;margin:0 0 18px}
+.bd-financement-marques{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 10px}
+.bd-financement-marque{display:flex;align-items:center;justify-content:center;min-width:0;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.bd-financement-marque img{display:block;object-fit:contain;max-width:100%;height:32px}
+.bd-financement-texte{margin:0;color:var(--ink);font-size:.95rem;line-height:1.5}
+.bd-financement-texte strong{font-weight:750}
+.bd-financement-conditions{margin:6px 0 0;color:var(--muted);font-size:.86rem;line-height:1.5}
+@media(max-width:400px){.bd-financement{padding:14px}.bd-financement-marques{gap:8px}.bd-financement-marque{padding:7px 8px}.bd-financement-marque img{width:auto;max-width:86px;height:30px}}

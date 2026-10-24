@@ -9,6 +9,7 @@
   <meta name="referrer" content="no-referrer">
   <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/bd.css">
+  <link rel="stylesheet" href="/assets/bd-financement.css">
   <script src="/assets/config.js"></script>
   <script defer src="/assets/main.js"></script>
   <script defer src="/assets/bd-achat.js"></script>
@@ -45,6 +46,14 @@
 
     <form class="bdq-form" id="bda-form" novalidate hidden>
       <p class="hp"><label>Ne pas remplir <input name="siteweb" tabindex="-1" autocomplete="off"></label></p>
+      <aside class="bd-financement" aria-label="Paiement en plusieurs fois">
+        <div class="bd-financement-marques" aria-hidden="true">
+          <span class="bd-financement-marque"><img src="/assets/img/paiement/klarna.svg" alt="" width="76" height="32"></span>
+          <span class="bd-financement-marque"><img src="/assets/img/paiement/paypal.svg" alt="" width="90" height="32"></span>
+        </div>
+        <p class="bd-financement-texte"><strong>Paiement en plusieurs fois</strong> avec Klarna ou PayPal, selon votre éligibilité.</p>
+        <p class="bd-financement-conditions">Les options et conditions disponibles s’affichent au paiement.</p>
+      </aside>
       <p class="bdq-intro">Vos coordonnées servent à la commande et à vous transmettre votre lien personnel. Rien d’intime n’est demandé ici : le questionnaire s’ouvre après le paiement.</p>
 
       <div class="bdq-q" id="bda-q-prenoms">
@@ -70,7 +79,7 @@
         <label class="bdq-choice"><input type="checkbox" name="consentement" id="bda-consentement"><span>J’accepte que ces informations servent à traiter ma commande (voir la <a href="/confidentialite.html">politique de confidentialité</a>). <span class="bdq-req">(nécessaire)</span></span></label>
       </div>
 
-      <p class="bdq-notice">Paiement sécurisé par Stripe, sans quitter le site, pour Run Coaching. Le montant est dû en une fois ; selon votre éligibilité, Klarna ou PayPal peuvent vous proposer leurs propres solutions de financement, à leurs conditions. Votre questionnaire personnel s’ouvre une fois le paiement vérifié.</p>
+      <p class="bdq-notice">Paiement sécurisé par Stripe pour Run Coaching. Si vous choisissez un financement, il est proposé par Klarna ou PayPal à leurs propres conditions. Votre questionnaire personnel s’ouvre une fois le paiement vérifié.</p>
       <p class="bdq-notice">Aucun remboursement n’est prévu à la demande, sous réserve des droits que la loi vous garantit.</p>
 
       <div class="bdq-errors" id="bda-errors" tabindex="-1" role="alert"></div>
