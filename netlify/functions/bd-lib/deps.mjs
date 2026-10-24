@@ -12,11 +12,12 @@ export async function depsProd(context){
   return { store: await magasinNetlify(context, cfg.mode), cfg, now: Date.now, fetchFn: fetch, envoyeur: choisirEnvoyeur(cfg), journal };
 }
 
-// Sans fournisseur valide, les messages restent « en_attente_fournisseur », visibles dans la file.
+// Sans configuration complète du courriel, les messages restent « en_attente_fournisseur »
+// sans consommer de tentative. L'ouverture des nouvelles ventes n'est pas un prérequis.
 export function choisirEnvoyeur(cfg, fetchFn = fetch){
-  if(cfg.mailProvider === 'make' && cfg.makeUrl && cfg.makeCle.length >= 32){
+  if(cfg.mailProvider === 'make' && cfg.courrielsConfigures){
     return envoyeurMake({ url: cfg.makeUrl, cle: cfg.makeCle, mode: cfg.mode, fetchFn });
   }
-  if(cfg.mailProvider !== 'none') journal('fournisseur_inconnu', cfg.mailProvider);
+  if(cfg.mailProvider !== 'none') journal('fournisseur_non_configure', cfg.mailProvider);
   return envoyeurAucun();
 }

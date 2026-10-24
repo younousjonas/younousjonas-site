@@ -1088,3 +1088,78 @@ test('texteEnHtml : échappe le HTML, garde les retours à la ligne', () => {
   assert.ok(h.includes('<a href="https://younousjonas.com/mon-album#cle=abc">'));
   assert.ok(!h.includes('<b>'));
 });
+
+// ---------- Configuration avant ouverture ----------
+test('configuration Stripe : clés secrètes ou restreintes admises dans leur mode uniquement', () => {
+  for(const mode of ['test', 'live']){
+    const reglage = {
+      BD_PAYMENTS_MODE: mode, BD_PAYMENTS_LIVE_CONFIRMED: 'oui',
+      BD_STRIPE_PUBLISHABLE_KEY: `pk_${mode}_factice`,
+      BD_MAIL_PROVIDER: 'make', BD_MAKE_WEBHOOK_URL: MAKE_URL, BD_MAKE_WEBHOOK_KEY: MAKE_CLE,
+    };
+    for(const type of ['sk', 'rk']){
+      assert.equal(lireConfig(env({ ...reglage, BD_STRIPE_SECRET_KEY: `${type}_${mode}_factice` })).paiementsActifs, true);
+      const autreMode = mode === 'test' ? 'live' : 'test';
+      assert.equal(lireConfig(env({ ...reglage, BD_STRIPE_SECRET_KEY: `${type}_${autreMode}_factice` })).paiementsActifs, false);
+    }
+  }
+});
+
+test('configuration courriel : le mode live exige les mêmes prérequis que la file', () => {
+  const reglage = {
+    BD_PAYMENTS_MODE: 'live', BD_PAYMENTS_LIVE_CONFIRMED: 'oui',
+    BD_STRIPE_SECRET_KEY: 'rk_live_factice', BD_STRIPE_PUBLISHABLE_KEY: 'pk_live_factice',
+    BD_MAIL_PROVIDER: 'make', BD_MAKE_WEBHOOK_URL: MAKE_URL, BD_MAKE_WEBHOOK_KEY: MAKE_CLE,
+  };
+  for(const manque of [
+    { BD_MAKE_WEBHOOK_URL: 'https://exemple.invalid/hook' }, { BD_MAKE_WEBHOOK_KEY: 'courte' },
+    { BD_LINK_SECRET: '' }, { BD_LINK_SECRET: 'courte' },
+    { BD_ADMIN_EMAIL: '' }, { BD_ADMIN_EMAIL: 'adresse-invalide' },
+  ]){
+    const cfg = lireConfig(env({ ...reglage, ...manque }));
+    assert.equal(cfg.courrielsConfigures, false);
+    assert.equal(cfg.paiementsActifs, false);
+    assert.ok(cfg.raisonsInactif.some((r) => r.includes('fournisseur de courriel')));
+    assert.equal(choisirEnvoyeur(cfg).disponible, false);
+  }
+  const cfg = lireConfig(env({ ...reglage, BD_ADMIN_EMAIL: ' admin@example.invalid ' }));
+  assert.equal(cfg.adminEmail, 'admin@example.invalid');
+  assert.equal(cfg.courrielsConfigures, true);
+  assert.equal(cfg.paiementsActifs, true);
+});
+
+test('file : configuration incomplète sans tentative perdue, reprise après configuration même si les ventes sont fermées', async () => {
+  const reglage = {
+    BD_MAIL_PROVIDER: 'make', BD_MAKE_WEBHOOK_URL: MAKE_URL, BD_MAKE_WEBHOOK_KEY: MAKE_CLE,
+    BD_ADMIN_EMAIL: INTERET_OK.email,
+  };
+  for(const manque of [
+    { BD_MAKE_WEBHOOK_URL: '' }, { BD_MAKE_WEBHOOK_KEY: '' },
+    { BD_LINK_SECRET: '' }, { BD_LINK_SECRET: 'courte' },
+    { BD_ADMIN_EMAIL: '' }, { BD_ADMIN_EMAIL: 'adresse-invalide' },
+  ]){
+    const m = monde();
+    await commandePayee(m);
+    await mettreEnFile(m.d.store, { type: 'alerte', dedup: 'alerte-test-config', destinataire: 'admin', donnees: { sujet: 'Test' } }, m.temps());
+    const mk = makeSimule({ autorise: INTERET_OK.email });
+    m.d.cfg = lireConfig(env({ ...reglage, ...manque }));
+    m.d.envoyeur = choisirEnvoyeur(m.d.cfg, mk.fetchFn);
+    const attente = await executerFile(m.d);
+    assert.equal(attente.attente, 2);
+    assert.equal(mk.recus.length, 0);
+    const cles = await m.d.store.list('ob/');
+    for(const k of cles){
+      const it = await m.d.store.getJSON(k);
+      assert.equal(it.statut, 'en_attente_fournisseur');
+      assert.equal(it.tentatives, 0);
+      assert.equal(it.derniereErreur, null);
+    }
+    m.d.cfg = lireConfig(env({ ...reglage, BD_PAYMENTS_ENABLED: 'false' }));
+    assert.equal(m.d.cfg.paiementsActifs, false);
+    m.d.envoyeur = choisirEnvoyeur(m.d.cfg, mk.fetchFn);
+    assert.equal((await executerFile(m.d)).envoyes, 2);
+    assert.equal(mk.gmail.length, 2);
+    assert.equal((await executerFile(m.d)).envoyes, 0);
+    for(const k of cles) assert.equal((await m.d.store.getJSON(k)).tentatives, 0);
+  }
+});

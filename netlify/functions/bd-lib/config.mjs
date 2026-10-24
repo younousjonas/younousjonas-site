@@ -2,6 +2,7 @@
 // Le catalogue est autoritatif côté serveur : le navigateur n'envoie jamais un prix.
 // Ce dossier n'est pas une fonction (pas de bd-lib.mjs ni d'index.mjs) : Netlify l'embarque
 // seulement comme dépendance des fonctions bd-*.
+import { emailValide } from './util.mjs';
 
 export const OFFRES = {
   '297': {
@@ -48,11 +49,11 @@ export function lireConfig(env = process.env){
   const sk = env.BD_STRIPE_SECRET_KEY || '';
   const pk = env.BD_STRIPE_PUBLISHABLE_KEY || '';
   const wh = env.BD_STRIPE_WEBHOOK_SECRET || '';
-  const prefixeSk = mode === 'live' ? 'sk_live_' : 'sk_test_';
+  const prefixesServeur = [`sk_${mode}_`, `rk_${mode}_`];
   const prefixePk = mode === 'live' ? 'pk_live_' : 'pk_test_';
   const raisons = [];
   if(env.BD_PAYMENTS_ENABLED !== 'true') raisons.push('BD_PAYMENTS_ENABLED différent de "true"');
-  if(!sk.startsWith(prefixeSk)) raisons.push('BD_STRIPE_SECRET_KEY absente ou hors mode ' + mode);
+  if(!prefixesServeur.some((prefixe) => sk.startsWith(prefixe))) raisons.push('BD_STRIPE_SECRET_KEY absente ou hors mode ' + mode);
   if(!pk.startsWith(prefixePk)) raisons.push('BD_STRIPE_PUBLISHABLE_KEY absente ou hors mode ' + mode);
   if(!wh.startsWith('whsec_')) raisons.push('BD_STRIPE_WEBHOOK_SECRET absente');
   const secretLien = env.BD_LINK_SECRET || '';
@@ -60,11 +61,16 @@ export function lireConfig(env = process.env){
   const mailProvider = env.BD_MAIL_PROVIDER || 'none';
   const makeUrl = env.BD_MAKE_WEBHOOK_URL || '';
   const makeCle = env.BD_MAKE_WEBHOOK_KEY || '';
-  if(mailProvider === 'make' && (!/^https:\/\/hook\.[a-z0-9]+\.make\.com\/[A-Za-z0-9]+$/.test(makeUrl) || makeCle.length < 32)){
+  const makeValide = /^https:\/\/hook\.[a-z0-9]+\.make\.com\/[A-Za-z0-9]+$/.test(makeUrl) && makeCle.length >= 32;
+  const adminEmail = (env.BD_ADMIN_EMAIL || '').trim();
+  // Indépendant de l'ouverture des ventes : les confirmations déjà dues doivent encore partir
+  // après leur fermeture. Une configuration incomplète laisse toute la file en attente.
+  const courrielsConfigures = FOURNISSEURS_COURRIEL.has(mailProvider) && makeValide && secretLien.length >= 32 && emailValide(adminEmail);
+  if(mailProvider === 'make' && !makeValide){
     raisons.push('BD_MAIL_PROVIDER=make sans BD_MAKE_WEBHOOK_URL ou BD_MAKE_WEBHOOK_KEY valides');
   }
   if(mode === 'live' && env.BD_PAYMENTS_LIVE_CONFIRMED !== 'oui') raisons.push('mode live sans BD_PAYMENTS_LIVE_CONFIRMED=oui');
-  if(mode === 'live' && !FOURNISSEURS_COURRIEL.has(mailProvider)) raisons.push('mode live sans fournisseur de courriel branché');
+  if(mode === 'live' && !courrielsConfigures) raisons.push('mode live sans fournisseur de courriel complètement configuré');
   const site = (env.BD_SITE_URL || env.URL || 'https://younousjonas.com').replace(/\/+$/, '');
   const origines = new Set(['https://younousjonas.com', 'https://www.younousjonas.com', site]);
   for(const k of ['URL', 'DEPLOY_PRIME_URL', 'DEPLOY_URL']) if(env[k]) origines.add(String(env[k]).replace(/\/+$/, ''));
@@ -84,8 +90,9 @@ export function lireConfig(env = process.env){
     // par Stripe a été vérifié sur le compte (BD_STRIPE_RECEIPTS_CONFIRMED=oui).
     recuStripe: env.BD_STRIPE_RECEIPTS_CONFIRMED === 'oui',
     mailProvider,
+    courrielsConfigures,
     makeUrl,
     makeCle,
-    adminEmail: env.BD_ADMIN_EMAIL || '',
+    adminEmail,
   };
 }
