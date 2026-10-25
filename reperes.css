@@ -1,0 +1,29 @@
+/* Les repères : trois portes, une idée par écran. */
+.reader-entry{min-height:100svh;display:grid;place-items:center;padding:120px 28px 90px}
+.reader-content{width:min(980px,100%);text-align:center;margin-top:-20px}
+.reader-entry .course-label{margin-bottom:32px}
+.reader-entry h1{font-size:clamp(62px,10.5vw,134px);line-height:1.08;letter-spacing:-.065em;font-weight:600;margin:0;padding:0}
+.recognition{font-size:clamp(18px,2vw,24px);line-height:1.6;letter-spacing:-.4px;margin:31px 0 0;color:#d4d4d4}
+.recognition span{color:#a1a1a1}
+.reader-links{margin-top:57px;gap:42px;flex-wrap:wrap}
+dialog strong{font-weight:400;color:var(--text)}
+dialog .places{font-size:20px;line-height:1.5;letter-spacing:-.3px;color:#e3e3e3;margin-bottom:27px}
+dialog .closing-thought{color:#e3e3e3}
+dialog .quiet{margin-top:10px}
+dialog .close{min-width:44px;min-height:44px}
+@media(max-width:700px){
+  .reader-entry{padding:110px 23px 75px}
+  .reader-entry .course-label{font-size:13px;margin-bottom:29px}
+  .reader-entry h1{font-size:clamp(43px,10.8vw,76px)}
+  .recognition{font-size:18px;letter-spacing:-.35px;margin-top:29px}
+  .reader-links{margin-top:46px;gap:28px}
+  .reader-links button{font-size:14px}
+  dialog .places{font-size:18px}
+}
+@media(max-width:400px){
+  .reader-entry{padding-left:18px;padding-right:18px}
+  .reader-links{gap:21px}
+  .reader-links button{font-size:13px}
+  .recognition{font-size:16px}
+  dialog h2{font-size:29px}
+}

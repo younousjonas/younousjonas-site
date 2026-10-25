@@ -1,0 +1,15 @@
+/* Le parcours prolonge le cours avec la même simplicité. */
+.freedom-statement{color:#a1a1a1}
+.practice-steps{list-style:decimal;margin:30px 0;padding-left:25px}
+.practice-steps li{padding-left:9px;margin:0 0 23px}
+.practice-steps li::marker{color:#999;font-size:13px}
+.practice-steps h3{font-size:18px;margin:0 0 6px}
+.practice-steps p{margin:0}
+dialog .close{min-width:44px;min-height:44px}
+@media(max-width:400px){
+  .course-statement{font-size:16px}
+  .course-links{gap:30px}
+  .practice-steps{padding-left:20px}
+  .practice-steps li{padding-left:5px}
+  .practice-steps h3{font-size:17px}
+}

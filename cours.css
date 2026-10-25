@@ -1,0 +1,10 @@
+/* Le cours : une idée par écran. */
+.course{min-height:100svh;display:grid;place-items:center;padding:120px 28px 90px}
+.course-content{text-align:center;width:100%;margin-top:-20px}
+.course-label{margin:0 0 32px;color:#a1a1a1;font-size:15px;line-height:1.4;letter-spacing:.1px}
+.course h1{font-size:clamp(68px,10.8vw,138px);font-weight:600;letter-spacing:-.065em;line-height:1.1;margin:0;padding:0}
+.course-statement{font-size:clamp(18px,2vw,24px);letter-spacing:-.45px;line-height:1.6;margin:31px 0 0;color:#d4d4d4}
+.course-statement span{color:#a1a1a1}
+.course-links{margin-top:58px;gap:40px}
+@media(max-width:700px){.course{padding:110px 23px 75px}.course-content{margin-top:-20px}.course-label{font-size:13px;margin-bottom:29px}.course h1{font-size:clamp(44px,10.8vw,76px);letter-spacing:-.065em}.course-statement{font-size:18px;line-height:1.65;margin-top:29px;letter-spacing:-.35px}.course-links{margin-top:48px;gap:34px}}
+@media(max-width:370px){.course{padding-left:16px;padding-right:16px}.course h1{font-size:42px}.course-statement{font-size:17px}}
