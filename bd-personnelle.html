@@ -34,17 +34,28 @@
 </dialog>
 <dialog id="histoire" aria-labelledby="histoire-title">
 <button class="close" data-close aria-label="Fermer">×</button>
-<p class="eyebrow">Mon histoire en BD</p><h2 id="histoire-title">Comment en êtes-vous<br>arrivé là ?</h2>
-<p>Il faut parfois revenir à l’enfance pour raconter un choix fait bien plus tard. Retrouver une personne, un départ, une rencontre qui a changé la suite.</p>
-<p>Nous prenons le temps de relier plusieurs périodes de votre vie. Lors de deux entretiens, vous me racontez ce qui a compté et le sens que vous lui donnez aujourd’hui. J’en fais un récit que vous relisez avant l’illustration.</p>
-<p>Pour garder votre version de cette histoire, et pouvoir la transmettre.</p>
-<p><strong>80 pages en couleur et une couverture personnalisée.</strong><br>Deux entretiens individuels d’une heure avec Younous. Un album privé en PDF haute définition.</p>
+<p class="eyebrow">Mon histoire en BD</p><h2 id="histoire-title">Comprendre ce qui<br>vous retient.</h2>
+<p>Certaines situations reviennent dans votre vie. Vous avez parfois le sentiment de connaître le problème, sans parvenir à faire autrement.</p>
+<p>Nous prenons le temps de regarder votre histoire ensemble. Pour comprendre ce qui vous retient et raconter ce qui devient possible.</p>
+<h3>Un questionnaire personnel</h3>
+<p>Un premier travail de réflexion, à votre rythme. Vous revenez sur les moments qui ont compté, les décisions prises et les difficultés qui reviennent. Vos réponses peuvent faire apparaître des liens que nous explorerons ensemble. Vous choisissez les sujets à aborder.</p>
+<h3>Deux entretiens d’une heure avec moi</h3>
+<p>Nous partons de vos réponses et de situations concrètes. Je vous accompagne pour préciser ce qui se joue, interroger ce qui semble aller de soi et explorer les choix qui s’ouvrent à vous.</p>
+<h3>Votre histoire, en 80 pages de BD</h3>
+<p>Ce travail nourrit un récit que vous relisez, corrigez et validez avant l’illustration. Un album personnel pour retrouver ce que vous avez compris, prendre du recul et, si vous le souhaitez, le transmettre.</p>
+<p><strong>80 pages en couleur et une couverture personnalisée.</strong><br>Un album numérique privé, livré en PDF haute définition.</p>
 <p class="price">891 €</p>
-<a class="quiet" href="achat-bd?offre=891">Commander mon album ↗</a>
-<details class="bd-details"><summary>Que se passe-t-il après le paiement ?</summary><p>Vous recevez un questionnaire approfondi sur un lien personnel. Les deux entretiens viennent ensuite. Vous relisez et validez le récit avant l’illustration.</p></details>
+<a class="quiet" href="achat-bd?offre=891">Commander mon histoire en BD ↗</a>
+<details class="bd-details"><summary>Que se passe-t-il après le paiement ?</summary><p>Vous accédez au questionnaire approfondi sur votre lien personnel, puis à l’organisation des deux entretiens avec Younous Jonas. Vous relisez et validez le récit avant l’illustration.</p></details>
 <details><summary>Les délais et le cadre</summary><p>Proposition narrative sous six semaines après le second entretien et la réception des éléments nécessaires. Le délai de l’album final est convenu par écrit pour chaque projet. Les retours sont également convenus par écrit. Impression et expédition non incluses.</p><p>Vous choisissez les sujets et les documents utilisables. Aucune publication sans votre accord distinct. Création graphique assistée par IA, sous la direction éditoriale de Younous Jonas.</p></details>
 <p class="terms"><a href="conditions-bd.html" target="_blank" rel="noopener">Conditions de commande ↗</a></p>
 </dialog>
 <script src="travail-dialogs.js"></script>
+<script>
+// Les liens de campagne ouvrent directement l’album présenté.
+if(location.hash === '#histoire' || location.hash === '#chapitre'){
+ document.querySelector('[data-open="'+location.hash.slice(1)+'"]').click();
+}
+</script>
 <footer class="site-footer"><a href="mentions-legales.html">Mentions légales</a><a href="confidentialite.html">Confidentialité</a><a href="conditions-bd.html">Conditions des albums</a><a href="/retractation-bd">Se rétracter du contrat</a></footer>
 </body></html>
