@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.younousjonas.com/</loc></url>
-  <url><loc>https://www.younousjonas.com/a-propos.html</loc></url>
-  <url><loc>https://www.younousjonas.com/livres.html</loc></url>
-  <url><loc>https://www.younousjonas.com/catalogue.html</loc></url>
-  <url><loc>https://www.younousjonas.com/bd-personnelle.html</loc></url>
-  <url><loc>https://www.younousjonas.com/le-malokisme.html</loc></url>
-  <url><loc>https://www.younousjonas.com/conferences.html</loc></url>
-  <url><loc>https://www.younousjonas.com/agenda.html</loc></url>
-  <url><loc>https://www.younousjonas.com/contact.html</loc></url>
+  <url><loc>https://younousjonas.com/</loc></url>
+  <url><loc>https://younousjonas.com/a-propos.html</loc></url>
+  <url><loc>https://younousjonas.com/livres.html</loc></url>
+  <url><loc>https://younousjonas.com/catalogue.html</loc></url>
+  <url><loc>https://younousjonas.com/le-malokisme.html</loc></url>
+  <url><loc>https://younousjonas.com/conferences.html</loc></url>
+  <url><loc>https://younousjonas.com/agenda.html</loc></url>
+<url><loc>https://younousjonas.com/v1-v2</loc></url>
+<url><loc>https://younousjonas.com/cours</loc></url>
+<url><loc>https://younousjonas.com/reperes</loc></url>
+<url><loc>https://younousjonas.com/parcours</loc></url>
+<url><loc>https://younousjonas.com/travail</loc></url>
+<url><loc>https://younousjonas.com/accompagnement</loc></url>
+<url><loc>https://younousjonas.com/bd-personnelle</loc></url>
 </urlset>

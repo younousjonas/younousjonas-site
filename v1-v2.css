@@ -1,0 +1,19 @@
+/* Deuxième écran : le passage V1–V2. */
+.inner-signature{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.inner-signature .return{font-size:13px;color:#999;display:inline-flex;align-items:center;gap:10px}
+.approach{min-height:100svh;display:grid;place-items:center;padding:118px 28px 90px}
+.approach-content{width:min(820px,100%);margin-top:-20px}
+.movement{display:grid;grid-template-columns:1fr 120px 1fr;align-items:center;text-align:center;font-size:clamp(90px,14.8vw,185px);line-height:1;letter-spacing:-.065em;font-weight:600;margin:0;padding:0}
+.v-one{color:#999}.v-two{color:var(--text)}
+.direction{font-size:64px;letter-spacing:0;font-weight:400;color:#737373}
+
+
+
+.approach-links{display:flex;justify-content:center;align-items:center;gap:44px;margin-top:89px}
+.approach-links button,.approach-links a{display:inline-flex;gap:9px;align-items:center;padding:12px 0;border:0;background:none;font-size:15px;line-height:1.3;font-weight:400;color:#ddd}
+.approach-links button span,.approach-links a span{font-size:13px;color:#999}
+.approach-links button:hover,.approach-links a:hover{text-decoration:underline;text-underline-offset:5px}
+@media(max-width:700px){.approach{padding:110px 25px 75px}.approach-content{margin-top:-20px}.movement{grid-template-columns:1fr 50px 1fr;font-size:clamp(74px,20vw,140px)}.direction{font-size:34px}.approach-links{gap:28px;margin-top:66px}.approach-links button,.approach-links a{font-size:14px;gap:6px}.inner-signature .return{font-size:12px}}
+@media(max-width:370px){.approach{padding-left:18px;padding-right:18px}.movement{grid-template-columns:1fr 38px 1fr;font-size:74px}.direction{font-size:29px}.approach-links{gap:19px}.approach-links button,.approach-links a{font-size:13px}}
+
+.approach-links a{text-decoration:none}
