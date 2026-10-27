@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://younousjonas.com/</loc></url>
+  <url><loc>https://younousjonas.com/</loc><lastmod>2026-10-27</lastmod></url>
   <url><loc>https://younousjonas.com/a-propos.html</loc></url>
   <url><loc>https://younousjonas.com/livres.html</loc></url>
   <url><loc>https://younousjonas.com/catalogue.html</loc></url>
   <url><loc>https://younousjonas.com/le-malokisme.html</loc></url>
   <url><loc>https://younousjonas.com/conferences.html</loc></url>
-  <url><loc>https://younousjonas.com/agenda.html</loc></url>
+  <url><loc>https://younousjonas.com/agenda</loc><lastmod>2026-10-27</lastmod></url>
+  <url><loc>https://younousjonas.com/bilan-2026</loc><lastmod>2026-10-27</lastmod></url>
 <url><loc>https://younousjonas.com/v1-v2</loc></url>
 <url><loc>https://younousjonas.com/cours</loc></url>
 <url><loc>https://younousjonas.com/reperes</loc></url>

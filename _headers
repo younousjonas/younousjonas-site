@@ -11,3 +11,12 @@
 /achat-bd*
   Referrer-Policy: no-referrer
   Cache-Control: no-store
+
+/reserver-bilan-2026*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
+/retractation-bilan-2026*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store

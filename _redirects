@@ -36,3 +36,9 @@
 /package.json /404 404!
 /package-lock.json /404 404!
 /tests/* /404 404!
+
+# Bilan 2026 : pages publiques et entrée de paiement à échéance vérifiée côté serveur.
+/bilan-2026 /bilan-2026.html 200
+/agenda /agenda.html 200
+/reserver-bilan-2026 /.netlify/functions/bilan-2026-checkout 200
+/retractation-bilan-2026 /retractation-bilan-2026.html 200
