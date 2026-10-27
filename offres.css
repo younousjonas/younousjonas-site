@@ -1,0 +1,26 @@
+/* Pages d'offres : sobriété cohérente avec l'accueil Réunion. */
+:root{color-scheme:dark}
+.inner-signature{position:relative;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.inner-signature .return{font-size:13px;text-decoration:none;color:#aaa}
+.offer-page{padding-bottom:30px}
+.offer-wrap{width:min(760px,calc(100% - 48px));margin:0 auto}
+.offer-hero{padding:100px 0 90px}
+.offer-kicker{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#a4a4a4;margin:0 0 25px}
+.offer-hero h1{font-size:clamp(46px,7vw,86px);line-height:1.06;letter-spacing:-.055em;font-weight:500;margin:0 0 36px;padding:0}
+.offer-hero h1 em{font-style:normal;color:#aaa}
+.offer-lead{font-size:clamp(18px,2vw,22px);line-height:1.55;color:#d0d0ce;margin:0 0 25px}
+.offer-action,.offer-inline{display:inline-flex;gap:14px;color:#f4f4f2;text-decoration:none;border-bottom:1px solid #777;padding-bottom:7px}
+.offer-action{margin-top:20px;font-size:16px}
+.offer-section{border-top:1px solid #333;padding:68px 0}
+.offer-section h2{font-size:clamp(31px,4.5vw,50px);font-weight:500;letter-spacing:-.045em;line-height:1.12;margin:0 0 25px}
+.offer-section p:not(.offer-kicker):not(.offer-price){font-size:17px;line-height:1.75;color:#bcbcbc;margin:0 0 22px}
+.offer-steps{display:grid;grid-template-columns:1fr 1fr;gap:35px 40px;margin-top:40px}
+.offer-steps article{border-top:1px solid #3c3c3c;padding-top:18px}
+.offer-steps span{font-size:13px;color:#888}
+.offer-steps h3{font-size:22px;line-height:1.25;font-weight:500;letter-spacing:-.02em;margin:15px 0}
+.offer-steps p{font-size:15px!important;line-height:1.65!important}
+.offer-section .offer-note{font-size:13px!important;color:#999!important}
+.offer-price{font-size:clamp(50px,8vw,80px);font-weight:500;letter-spacing:-.05em;margin:12px 0 18px}
+.offer-button{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:21px 23px;background:#f4f4f2;color:#090909;text-decoration:none;font-size:17px;font-weight:600;margin:35px 0 20px}
+.offer-button:hover{background:#ddd}
+@media(max-width:650px){.offer-hero{padding:65px 0 70px}.offer-section{padding:55px 0}.offer-steps{grid-template-columns:1fr;gap:18px}.offer-section p:not(.offer-kicker):not(.offer-price){font-size:16px}.offer-button{font-size:15px}}
