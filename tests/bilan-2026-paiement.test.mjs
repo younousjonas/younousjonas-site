@@ -4,6 +4,9 @@ import { paymentHandler, sessionParams, config, END } from '../netlify/functions
 import { processBilan, isBilan } from '../netlify/functions/bilan-lib/evenements.mjs';
 import { magasinMemoire } from '../netlify/functions/bd-lib/store.mjs';
 import endpointWebhook from '../netlify/functions/bilan-2026-evenements.mjs';
+import endpointPaiement from '../netlify/functions/bilan-2026-paiement.mjs';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 const NOW = Date.parse('2026-10-27T12:00:00Z');
 const cfg = { active: true, live: true, price: 'price_bilan', secret: 'server_fake', publishable: 'pk_live_fake' };
 const id = 'cs_live_abcdefghijklmno';
@@ -81,6 +84,19 @@ test('configuration : production refuse clés de test et aperçu refuse clés li
   assert.equal(config({ ...env, STRIPE_SECRET_KEY: 'rk_test_fake', CONTEXT: 'production' }).active, false);
 });
 
+test('Netlify : contexte de production reçu du runtime même sans variable CONTEXT', async () => {
+  const keys = ['CONTEXT', 'STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY', 'STRIPE_WEBHOOK_SECRET'];
+  const before = Object.fromEntries(keys.map(k => [k, process.env[k]]));
+  try {
+    delete process.env.CONTEXT;
+    Object.assign(process.env, { STRIPE_SECRET_KEY: 'rk_live_fake', STRIPE_PUBLISHABLE_KEY: 'pk_live_fake', STRIPE_WEBHOOK_SECRET: 'whsec_fake' });
+    const r = await endpointPaiement(new Request('https://younousjonas.com/?session_id=invalid'), { deploy: { context: 'production' } });
+    assert.equal(r.status, 400);
+  } finally {
+    for (const k of keys) if (before[k] === undefined) delete process.env[k]; else process.env[k] = before[k];
+  }
+});
+
 const event = (type, extra) => ({ id: 'evt_test', type: 'checkout.session.' + type, data: { object: session(extra) } });
 const deps = store => ({ store, cfg, now: () => NOW, makeUrl: 'https://make.example.invalid', makeSecret: 'fake' });
 
@@ -128,4 +144,53 @@ test('webhook : montant ou mode incorrect refusés ; événement étranger ignor
 test('webhook public refuse une fausse confirmation sans signature', async () => {
   const r = await endpointWebhook(new Request('https://younousjonas.com/', { method: 'POST', body: JSON.stringify(event('completed', { payment_status: 'paid' })) }), {});
   assert.equal(r.status, 400);
+});
+
+function interfaceFake({ returned = '', failFirst = false } = {}) {
+  const nodes = Object.fromEntries(['bilan-pay', 'bilan-payment', 'bilan-payment-status', 'bilan-payment-result',
+    'bilan-checkout', 'bilan-payment-retry'].map(id => [id, { hidden: true, textContent: '', disabled: false,
+      scrollIntoView() {}, addEventListener(_, fn) { this.click = () => fn({ preventDefault() {} }); } }]));
+  nodes['bilan-pay'].hidden = false;
+  const storage = new Map(), posts = []; let onComplete, paid = false, mounted = false;
+  const url = 'https://younousjonas.com/bilan-2026' + returned;
+  const location = { href: url, search: returned };
+  const context = { URL, URLSearchParams, Date, crypto: { randomUUID: () => input.request_id },
+    document: { getElementById: id => nodes[id] }, location,
+    history: { replaceState(_, __, path) { location.href = 'https://younousjonas.com' + path; } },
+    sessionStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
+    window: { matchMedia: () => ({ matches: true }), Stripe: () => ({ createEmbeddedCheckoutPage: async options => {
+      await options.fetchClientSecret(); onComplete = options.onComplete;
+      return { mount() { mounted = true; }, destroy() { mounted = false; } };
+    } }) },
+    fetch: async (_, options) => {
+      if (options?.method === 'POST') {
+        posts.push(options.body);
+        if (failFirst && posts.length === 1) throw new Error('Connexion interrompue');
+        return Response.json({ id, clientSecret: 'client_fake', publishableKey: 'pk_live_fake' });
+      }
+      return Response.json({ status: paid ? 'complete' : 'open', payment_status: paid ? 'paid' : 'unpaid' });
+    },
+  };
+  runInNewContext(readFileSync(new URL('../assets/bilan-2026-paiement.js', import.meta.url), 'utf8'), context);
+  return { nodes, posts, location, mounted: () => mounted, pay: async () => { paid = true; await onComplete(); } };
+}
+
+test('interface : double clic, paiement intégré, confirmation vérifiée sans navigation extérieure', async () => {
+  const ui = interfaceFake();
+  await Promise.all([ui.nodes['bilan-pay'].click(), ui.nodes['bilan-pay'].click()]);
+  assert.equal(ui.posts.length, 1); assert.equal(ui.mounted(), true);
+  assert.equal(ui.nodes['bilan-payment-result'].hidden, true);
+  await ui.pay();
+  assert.equal(ui.nodes['bilan-payment-result'].hidden, false); assert.equal(ui.mounted(), false);
+  assert.equal(ui.location.href, 'https://younousjonas.com/bilan-2026#reservation');
+});
+
+test('interface : connexion interrompue, reprise avec la même demande ; jamais de faux succès', async () => {
+  const ui = interfaceFake({ failFirst: true });
+  await ui.nodes['bilan-pay'].click();
+  assert.equal(ui.nodes['bilan-payment-result'].hidden, true);
+  assert.equal(ui.nodes['bilan-payment-retry'].hidden, false);
+  await ui.nodes['bilan-payment-retry'].onclick();
+  assert.equal(ui.posts.length, 2); assert.equal(ui.posts[0], ui.posts[1]);
+  assert.equal(ui.mounted(), true);
 });

@@ -2,7 +2,7 @@
  * Le lien Stripe partagé séparément doit aussi être fermé dans Stripe à l’échéance.
  */
 const END = Date.parse('2026-11-02T00:00:00+04:00');
-const PAYMENT_URL = 'https://book.stripe.com/8x2fZgbFRbM11DVerQ8ww2t';
+const PAYMENT_URL = 'https://younousjonas.com/bilan-2026#reservation';
 const CAMPAIGN_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
 export function responseFor(method, query = {}, now = Date.now()) {
   const headers = { 'Cache-Control': 'no-store, max-age=0', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' };
