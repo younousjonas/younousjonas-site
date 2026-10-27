@@ -9,7 +9,7 @@
   const mount = document.getElementById('bilan-checkout');
   const retry = document.getElementById('bilan-payment-retry');
   const endpoint = '/.netlify/functions/bilan-2026-paiement';
-  const storageKey = 'bilan-2026-checkout';
+  const storageKey = 'bilan-2026-checkout-entretien90';
   let checkout, busy = false, cache, stripeLoading;
   try { cache = JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch (_) {}
   const save = () => { try { sessionStorage.setItem(storageKey, JSON.stringify(cache)); } catch (_) {} };

@@ -41,7 +41,7 @@ export function sessionParams(input, cfg, now) {
     integration_identifier: 'komsa_bilan_2026_qjthmzwp',
     'line_items[0][price]': cfg.price, 'line_items[0][quantity]': '1',
     customer_creation: 'always', 'invoice_creation[enabled]': 'true',
-    'invoice_creation[invoice_data][description]': 'Bilan 2026 — Préparer 2027 · Quatre semaines avec Younous Jonas',
+    'invoice_creation[invoice_data][description]': 'Bilan 2026 — Préparer 2027 · Questionnaire, entretien de 1 h 30, synthèse écrite et suivi écrit WhatsApp de 14 jours',
     'payment_intent_data[description]': 'Bilan 2026 — Préparer 2027',
     redirect_on_completion: 'if_required',
     return_url: SITE + '/bilan-2026?session_id={CHECKOUT_SESSION_ID}#reservation',
@@ -53,7 +53,7 @@ export function sessionParams(input, cfg, now) {
     'branding_settings[border_style]': 'rectangular',
     'name_collection[individual][enabled]': 'true',
     'name_collection[individual][optional]': 'false',
-    'custom_text[submit][message]': '4 entretiens, suivi WhatsApp et synthèse finale. Démarrage en novembre, sur rendez-vous. Les modalités figurent sur cette page.',
+    'custom_text[submit][message]': 'Questionnaire, un entretien de 1 h 30, synthèse écrite et 14 jours de suivi écrit WhatsApp après l’entretien. Démarrage en novembre, sur rendez-vous.',
   });
   // Stripe impose au moins 30 min. Une session commencée dans la dernière demi-heure
   // peut être terminée pendant ses 30 min de validité ; aucune nouvelle après END.
@@ -64,7 +64,7 @@ export function sessionParams(input, cfg, now) {
       optional: 'false', 'text[minimum_length]': min, 'text[maximum_length]': max })) p.set(`custom_fields[${i}][${k}]`, String(v));
   });
   const meta = { formule: 'bilan_2026', source_site: 'younousjonas.com', entite: 'Run Coaching',
-    tag_palier_source: 'N4_coaching', type_piece: 'Facture', motif: 'Bilan 2026 — Préparer 2027', palier_prix: 'lancement', };
+    tag_palier_source: 'N4_coaching', type_piece: 'Facture', motif: 'Bilan 2026 — Préparer 2027', palier_prix: 'lancement', bilan_format: 'entretien90_whatsapp14j', };
   for (const k of CAMPAIGNS) if (typeof input[k] === 'string' && /^[A-Za-z0-9_-]{1,120}$/.test(input[k])) meta[k] = input[k];
   for (const [k, v] of Object.entries(meta)) {
     p.set(`metadata[${k}]`, v); p.set(`payment_intent_data[metadata][${k}]`, v);
