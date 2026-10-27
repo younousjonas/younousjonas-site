@@ -146,12 +146,12 @@ test('webhook public refuse une fausse confirmation sans signature', async () =>
   assert.equal(r.status, 400);
 });
 
-function interfaceFake({ returned = '', failFirst = false } = {}) {
+function interfaceFake({ returned = '', failFirst = false, failMount = false } = {}) {
   const nodes = Object.fromEntries(['bilan-pay', 'bilan-payment', 'bilan-payment-status', 'bilan-payment-result',
     'bilan-checkout', 'bilan-payment-retry'].map(id => [id, { hidden: true, textContent: '', disabled: false,
       scrollIntoView() {}, addEventListener(_, fn) { this.click = () => fn({ preventDefault() {} }); } }]));
   nodes['bilan-pay'].hidden = false;
-  const storage = new Map(), posts = []; let onComplete, paid = false, mounted = false;
+  const storage = new Map(), posts = []; let onComplete, paid = false, mounted = false, mounts = 0;
   const url = 'https://younousjonas.com/bilan-2026' + returned;
   const location = { href: url, search: returned };
   const context = { URL, URLSearchParams, Date, crypto: { randomUUID: () => input.request_id },
@@ -160,7 +160,7 @@ function interfaceFake({ returned = '', failFirst = false } = {}) {
     sessionStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
     window: { matchMedia: () => ({ matches: true }), Stripe: () => ({ createEmbeddedCheckoutPage: async options => {
       await options.fetchClientSecret(); onComplete = options.onComplete;
-      return { mount() { mounted = true; }, destroy() { mounted = false; } };
+      return { mount() { mounts++; if (failMount && mounts === 1) throw new Error('Chargement interrompu'); mounted = true; }, destroy() { mounted = false; } };
     } }) },
     fetch: async (_, options) => {
       if (options?.method === 'POST') {
@@ -193,4 +193,12 @@ test('interface : connexion interrompue, reprise avec la même demande ; jamais 
   await ui.nodes['bilan-payment-retry'].onclick();
   assert.equal(ui.posts.length, 2); assert.equal(ui.posts[0], ui.posts[1]);
   assert.equal(ui.mounted(), true);
+});
+
+test('interface : formulaire interrompu au montage, reprise sans créer une deuxième session', async () => {
+  const ui = interfaceFake({ failMount: true });
+  await ui.nodes['bilan-pay'].click();
+  assert.equal(ui.mounted(), false); assert.equal(ui.nodes['bilan-payment-retry'].hidden, false);
+  await ui.nodes['bilan-payment-retry'].onclick();
+  assert.equal(ui.mounted(), true); assert.equal(ui.posts.length, 1);
 });

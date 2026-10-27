@@ -110,6 +110,8 @@
       mount.hidden = false; checkout.mount('#bilan-checkout');
       status.textContent = 'Ton règlement sécurisé · 397 €';
     } catch (e) {
+      if (checkout) { try { checkout.destroy(); } catch (_) {} checkout = null; }
+      mount.hidden = true;
       status.textContent = e.message;
       retry.hidden = false; retry.textContent = 'Réessayer'; retry.onclick = open;
     } finally { busy = false; button.disabled = false; }
