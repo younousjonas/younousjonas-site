@@ -3,12 +3,14 @@
   "private": true,
   "description": "Site statique younousjonas.com ; dépendances des seules fonctions Netlify bd-* (albums BD personnelle).",
   "type": "commonjs",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@netlify/blobs": "^10.0.0"
   },
   "scripts": {
-    "test": "node --test tests/bd.test.mjs tests/bd-store-guard.test.mjs tests/bd-retractation.test.mjs tests/bd-conditions.test.mjs",
+    "test": "node --test tests/bd.test.mjs tests/bd-store-guard.test.mjs tests/bd-retractation.test.mjs tests/bd-conditions.test.mjs tests/bilan-2026-checkout.test.mjs tests/bilan-2026-paiement.test.mjs",
     "conditions:check": "python scripts/generer-conditions.py --check"
   }
 }
